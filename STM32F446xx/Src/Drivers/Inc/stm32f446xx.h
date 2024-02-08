@@ -70,7 +70,13 @@
 #define GPIOG_BASE_ADDR        (AHB1_BASE_ADDR + 0x1800U)
 #define GPIOH_BASE_ADDR        (AHB1_BASE_ADDR + 0x1C00U)
 
-/* RCC Peripheral Base Addresses */
+/* SPI Peripheral Base Addresses */
+#define SPI1_BASE_ADDR         (APB2_BASE_ADDR + 0x3000U)
+#define SPI2_BASE_ADDR         (APB1_BASE_ADDR + 0x3800U)
+#define SPI3_BASE_ADDR         (APB1_BASE_ADDR + 0x3C00U)
+#define SPI4_BASE_ADDR         (APB2_BASE_ADDR + 0x3400U)
+
+/* RCC Peripheral Base Address */
 #define RCC_BASE_ADDR          (AHB1_BASE_ADDR + 0x3800U)
 
 /* EXTI Peripheral Base Address */
@@ -87,8 +93,9 @@
 #define IRQ_NO_EXTI9_5       (23U)
 #define IRQ_NO_EXTI15_10     (40U)
 
-/* ********** GPIO Register Set Structure Definition ********** */
+/* ********** Register Set Structure Definitions ********** */
 
+/* GPIO Register Set Structure Definition */
 typedef struct {
 	volatile uint32_t MODE;
 	volatile uint32_t OTYPE;
@@ -162,6 +169,19 @@ typedef struct {
 	volatile uint32_t CFGR;
 } SYSCFG_reg_t;
 
+/* SPI Register Set Structure Definition */
+typedef struct {
+	volatile uint32_t CR1;
+	volatile uint32_t CR2;
+	volatile uint32_t SR;
+	volatile uint32_t DR;
+	volatile uint32_t CRCPR;
+	volatile uint32_t RXCRCR;
+	volatile uint32_t TXCRCR;
+	volatile uint32_t I2SCFGR;
+	volatile uint32_t I2SPR;
+} SPI_reg_t;
+
 /* ************* Device Peripheral's Definitions ************* */
 
 /* GPIO Peripherals */
@@ -183,6 +203,12 @@ typedef struct {
 /* SYSCFG peripheral */
 #define SYSCFG                 ((SYSCFG_reg_t*)SYSCFG_BASE_ADDR)
 
+/* SPI Peripherals */
+#define SPI1                   ((SPI_reg_t*)SPI1_BASE_ADDR)
+#define SPI2                   ((SPI_reg_t*)SPI2_BASE_ADDR)
+#define SPI3                   ((SPI_reg_t*)SPI3_BASE_ADDR)
+#define SPI4                   ((SPI_reg_t*)SPI4_BASE_ADDR)
+
 /* ****** Macro Definitions for Some Peripheral's Basic Functionality ****** */
 
 /* GPIO peripheral clock enable */
@@ -196,6 +222,34 @@ typedef struct {
 #define __SYSCFG_CLK_EN()                (RCC->APB2ENR |= (0x1 << 0xE))
 /* SYSCFG peripheral clock disable */
 #define __SYSCFG_CLK_DIS()               (RCC->APB2ENR &= ~(0x1 << 0xE))
+
+/* SPI1 peripheral clock enable */
+#define __SPI1_CLK_EN()                  (RCC->APB2ENR |= (0x1 << 0xC))
+/* SPI1 peripheral clock disable */
+#define __SPI1_CLK_DIS()                 (RCC->APB2ENR &= ~(0x1 << 0xC))
+/* SPI1 peripheral register reset */
+#define __SPI1_RST()                	 { RCC->APB2RSTR |= (0x1 << 0xC) ; RCC->APB2RSTR &= ~(0x1 << 0xC); }
+
+/* SPI2 peripheral clock enable */
+#define __SPI2_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0xE))
+/* SPI2 peripheral clock disable */
+#define __SPI2_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0xE))
+/* SPI2 peripheral register reset */
+#define __SPI2_RST()                	 { RCC->APB1RSTR |= (0x1 << 0xE) ; RCC->APB1RSTR &= ~(0x1 << 0xE); }
+
+/* SPI3 peripheral clock enable */
+#define __SPI3_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0xF))
+/* SPI3 peripheral clock disable */
+#define __SPI3_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0xF))
+/* SPI3 peripheral register reset */
+#define __SPI3_RST()                	 { RCC->APB1RSTR |= (0x1 << 0xF) ; RCC->APB1RSTR &= ~(0x1 << 0xF); }
+
+/* SPI4 peripheral clock enable */
+#define __SPI4_CLK_EN()                  (RCC->APB2ENR |= (0x1 << 0xD))
+/* SPI4 peripheral clock disable */
+#define __SPI4_CLK_DIS()                 (RCC->APB2ENR &= ~(0x1 << 0xD))
+/* SPI4 peripheral register reset */
+#define __SPI4_RST()                	 { RCC->APB2RSTR |= (0x1 << 0xD) ; RCC->APB2RSTR &= ~(0x1 << 0xD); }
 
 /* EXTI line get interrupt status */
 #define __EXTI_LINE_INT_STS(pin_num)     (EXTI->PR & (1 << pin_num))

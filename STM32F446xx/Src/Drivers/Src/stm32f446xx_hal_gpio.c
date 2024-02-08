@@ -46,7 +46,7 @@ void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en)
 {
 	uint8_t port = GPIO_BASE_ADDR_TO_PORT_NUM(pGPIOx);
 
-    /* check whether to enable or disable the GPIO peirpheral clock */
+    /* check whether to enable or disable the GPIO peripheral clock */
 	if(en) {
 		/* enable the GPIO peripheral clock for the specified port */
 		__GPIOx_PCLK_EN(port);
@@ -150,7 +150,7 @@ void HAL_GPIO_init(GPIO_handle_t *pGPIOhandle)
 }
 
 /*
- * @brief        Enable or Disable GPIO peripheral clock
+ * @brief        De-initialize GPIO port
  *
  * @param[in]    pGPIOx : GPIO port base address
  *

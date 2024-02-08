@@ -1,8 +1,8 @@
 /*
  ******************************************************************************
- * @file      stm32f446xx_hal_gpio.h
+ * @file      stm32f446xx_hal_spi.h
  * @author    Rahul Singh
- * @brief     Header file for STM32F446xx GPIO driver
+ * @brief     Header file for STM32F446xx SPI driver
  *
  ******************************************************************************
  *
@@ -31,35 +31,33 @@
  ******************************************************************************
 */
 
-#ifndef _STM32F446XX_HAL_GPIO_H_
-#define _STM32F446XX_HAL_GPIO_H_
+#ifndef _STM32F446XX_HAL_SPI_H_
+#define _STM32F446XX_HAL_SPI_H_
 
 #include "stm32f446xx.h"
 
 /* ***************** Enum Definitions ******************* */
 
-typedef enum {
-	GPIO_PIN_RESET = 0,
-	GPIO_PIN_SET
-}GPIO_pin_state_t;
+
 
 /* ***************** Structure Definitions ******************* */
 
-/* GPIO pin configuration structure */
+/* SPI configuration structure */
 typedef struct {
-	uint8_t pin_number;
-	uint8_t pin_mode;
-	uint8_t pin_otype;
-	uint8_t pin_ospeed;
-	uint8_t pupd_ctrl;
-	uint8_t alt_func;
-}GPIO_cfg_t;
+	uint8_t device_mode;
+	uint8_t speed;
+	uint8_t cpol; //sclk polarity
+	uint8_t cpha; //sclk phase
+	uint8_t dff; //data frame format
+	uint8_t bus_cfg;
+	uint8_t ssm; //sw slave management ctrl
+}SPI_cfg_t;
 
-/* GPIO pin handle structure */
+/* SPI handle structure */
 typedef struct {
-	GPIO_reg_t *pGPIOx;
-	GPIO_cfg_t cfg;
-}GPIO_handle_t;
+	SPI_reg_t *pSPIx;
+	SPI_cfg_t cfg;
+}SPI_handle_t;
 
 
 /* ******************* Macro Definitions ********************* */
@@ -138,110 +136,58 @@ typedef struct {
 /* ***************** Function Declarations ******************* */
 
 /*
- * @brief        Enable or Disable GPIO peripheral clock
+ * @brief        Enable or Disable SPI peripheral clock
  *
- * @param[in]    pGPIOx : GPIO port base address
+ * @param[in]    pSPIx : SPI peripheral base address
  * @param[in]    en     : 0 -> enable, 1 0-> disable
  *
  * @return       None
  *
  */
-void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en);
+void HAL_SPI_pclk_ctrl(SPI_reg_t *pSPIx, uint8_t en);
 
 /*
- * @brief        Initialize/Setup/Configure GPIO pin
+ * @brief        Initialize/Setup/Configure SPI peripheral
  *
- * @param[in]    pGPIOhandle : Pointer to GPIO handle object
+ * @param[in]    pSPIhandle : Pointer to SPI handle object
  *
  * @return       None
  *
  */
-void HAL_GPIO_init(GPIO_handle_t *pGPIOhandle);
+void HAL_SPI_init(SPI_handle_t *pSPIhandle);
 
 /*
- * @brief        De-initialize GPIO port
+ * @brief        De-initialize SPI peripheral
  *
- * @param[in]    pGPIOx : GPIO port base address
+ * @param[in]    pSPIx : SPI peripheral base address
  *
  * @return       None
  *
  */
-void HAL_GPIO_deinit(GPIO_reg_t *pGPIOx);
+void HAL_SPI_deinit(SPI_reg_t *SPI_reg_t);
 
 /*
- * @brief        Read a GPIO pin
+ * @brief        Read data over SPI peripheral
  *
- * @param[in]    pGPIOx : GPIO port base address
- *
- * @return       GPIO pin state -> GPIO_PIN_SET : 1, GPIO_PIN_RESET : 0
- *
- */
-GPIO_pin_state_t HAL_GPIO_read_pin(GPIO_reg_t *pGPIOx, uint8_t pin_num);
-
-/*
- * @brief        Read a GPIO port
- *
- * @param[in]    pGPIOx : GPIO port base address
- *
- * @return       GPIO port value of uint16_t type
- *
- */
-uint16_t HAL_GPIO_read_port(GPIO_reg_t *pGPIOx);
-
-/*
- * @brief        Write a GPIO pin
- *
- * @param[in]    pGPIOx    : GPIO port base address
- * @param[in]    pin_num   : GPIO pin number
- * @param[in]    pin_state : GPIO pin state -> GPIO_PIN_SET or GPIO_PIN_RESET
+ * @param[in]    pSPIx     : SPI peripheral base address
+ * @param[in]    pRxBuffer : Pointer to the buffer storing received data
+ * @param[in]    len       : Size of data received (in bytes)
  *
  * @return       None
  *
  */
-void HAL_GPIO_write_pin(GPIO_reg_t *pGPIOx, uint8_t pin_num, GPIO_pin_state_t pin_state);
+void HAL_SPI_read_data(SPI_reg_t *pSPIx, uint8_t *pRxBuffer, uint32_t len);
 
 /*
- * @brief        Write a GPIO port
+ * @brief        Send data over SPI peripheral
  *
- * @param[in]    pGPIOx  : GPIO port base address
- * @param[in]    pin_val : GPIO port value of uint16_t type
+ * @param[in]    pSPIx     : SPI peripheral base address
+ * @param[in]    pTxBuffer : Pointer to the buffer sending data to be sent
+ * @param[in]    len       : Size of data to be sent (in bytes)
  *
  * @return       None
  *
  */
-void HAL_GPIO_write_port(GPIO_reg_t *pGPIOx, uint16_t port_val);
-
-/*
- * @brief        Toggle a GPIO pin
- *
- * @param[in]    pGPIOx  : GPIO port base address
- * @param[in]    pin_num : GPIO pin number
- *
- * @return       None
- *
- */
-void HAL_GPIO_toggle_pin(GPIO_reg_t *pGPIOx, uint8_t pin_num);
-
-/*
- * @brief        Configure the IRQ for a GPIO pin
- *
- * @param[in]    IRQ_num  : IRQ number for a specific GPIO pin
- * @param[in]    IRQ_prio : Priority level for the specified IRQ (0 to 16)
- * @param[in]    en       : 1 -> enable the IRQ, 0-> Disable the IRQ
- *
- * @return       None
- *
- */
-void HAL_GPIO_IRQ_config(uint32_t IRQ_num, uint32_t IRQ_prio, uint8_t en);
-
-/*
- * @brief        GPIO IRQ handler
- *
- * @param[in]    pin_num   : GPIO pin number
- *
- * @return       None
- *
- */
-void HAL_GPIO_IRQ_handler(uint8_t pin_num);
+void HAL_SPI_send_data(SPI_reg_t *pSPIx, uint8_t *pTxBuffer, uint32_t len);
 
 #endif
