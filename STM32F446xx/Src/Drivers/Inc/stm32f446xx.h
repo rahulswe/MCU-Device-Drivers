@@ -36,8 +36,14 @@
 #define _STM32F446XX_H_
 
 #include <stdint.h>
+#include <stddef.h>
 
-/* ********* Cortex-M4 processor specific registers ********** */
+/* ********* Utility Macro Definitions ********** */
+
+/* NULL pointer check macro */
+#define NULL_PTR_CHK(x) if(x == NULL) { return; }
+
+/* ********* Cortex-M4 Processor Specific Registers ********** */
 
 #define NVIC_ISER0             ((volatile uint32_t*)0xE000E100U)
 #define NVIC_ICER0             ((volatile uint32_t*)0xE000E180U)

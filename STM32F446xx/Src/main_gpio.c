@@ -34,7 +34,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include <stm32f446xx_hal_gpio.h>
+#include "stm32f446xx_hal_gpio.h"
 
 //#define LED_TOGGLING_ON_BUTTON_PRESS_WO_INT
 #define LED_TOGGLING_ON_BUTTON_PRESS_W_INT

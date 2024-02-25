@@ -31,8 +31,8 @@
  ******************************************************************************
 */
 
-#include <stm32f446xx_hal_gpio.h>
 #include <stdbool.h>
+#include "stm32f446xx_hal_gpio.h"
 
 /*
  * @brief        Enable or Disable GPIO peripheral clock
