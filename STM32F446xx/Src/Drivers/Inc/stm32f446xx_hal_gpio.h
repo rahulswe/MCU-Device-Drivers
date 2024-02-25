@@ -138,17 +138,6 @@ typedef struct {
 /* ***************** Function Declarations ******************* */
 
 /*
- * @brief        Enable or Disable GPIO peripheral clock
- *
- * @param[in]    pGPIOx : GPIO port base address
- * @param[in]    en     : 0 -> enable, 1 0-> disable
- *
- * @return       None
- *
- */
-void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en);
-
-/*
  * @brief        Initialize/Setup/Configure GPIO pin
  *
  * @param[in]    pGPIOhandle : Pointer to GPIO handle object

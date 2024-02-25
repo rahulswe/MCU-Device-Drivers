@@ -1,8 +1,8 @@
 /*
  ******************************************************************************
- * @file      main.c
+ * @file      main_gpio.c
  * @author    Rahul Singh
- * @brief     Sample application file for testing STM32F446xx drivers
+ * @brief     Sample application file for testing STM32F446xx GPIO driver
  *
  ******************************************************************************
  *
@@ -67,7 +67,6 @@ int main(void)
 	};
 
 	/* Initialize the GPIO pin for LED */
-	HAL_GPIO_PCLK_CTRL(GPIOA, ENABLE);
 	HAL_GPIO_init(&GPIO_LED_handle);
 
 	/* configuration for GPIO pin connected to button on NUCLEOF446RE board */
@@ -82,9 +81,14 @@ int main(void)
 	};
 
 	/* Initialize the GPIO pin for Button */
-	HAL_GPIO_PCLK_CTRL(GPIOC, ENABLE);
 	HAL_GPIO_init(&GPIO_BUTTON_handle);
 
+	/* Note: In contrast to the interrupt mode, in polling mode
+	 * keeping the button pressed will make the LED blink as here
+	 * we are continuously checking for the pin level while in
+	 * case of interrupt based, we are just checking for the falling
+	 * edge trigger.
+	 */
 	while(1) {
 		/* if button is pressed, then toggle the GPIO pin of LED */
 		if(HAL_GPIO_read_pin(GPIOC, GPIO_PIN_13) == BUTTON_PRESSED) {
@@ -109,7 +113,6 @@ int main(void)
 	};
 
 	/* Initialize the GPIO pin for LED */
-	HAL_GPIO_pclk_ctrl(GPIOA, ENABLE);
 	HAL_GPIO_init(&GPIO_LED_handle);
 
 	/* configuration for GPIO pin connected to button on NUCLEOF446RE board */
@@ -124,7 +127,6 @@ int main(void)
 	};
 
 	/* Initialize the GPIO pin for Button with interrupt on falling edge */
-	HAL_GPIO_pclk_ctrl(GPIOC, ENABLE);
 	HAL_GPIO_init(&GPIO_BUTTON_handle);
 	HAL_GPIO_IRQ_config(IRQ_NO_EXTI15_10, 14, ENABLE);
 

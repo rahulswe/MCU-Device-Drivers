@@ -32,6 +32,7 @@
 */
 
 #include <stm32f446xx_hal_gpio.h>
+#include <stdbool.h>
 
 /*
  * @brief        Enable or Disable GPIO peripheral clock
@@ -42,7 +43,7 @@
  * @return       None
  *
  */
-void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en)
+static void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, bool en)
 {
 	uint8_t port = GPIO_BASE_ADDR_TO_PORT_NUM(pGPIOx);
 
@@ -67,6 +68,9 @@ void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en)
 void HAL_GPIO_init(GPIO_handle_t *pGPIOhandle)
 {
 	uint32_t reg_val = 0;
+
+	/* enable the GPIO peripheral clock */
+	HAL_GPIO_pclk_ctrl(pGPIOhandle->pGPIOx, true);
 
 	/* check the GPIO pin mode specified in the pGPIOhandle cfg structure
 	 * is <= analog mode i.e. input mode or output mode or analog mode */
@@ -162,6 +166,9 @@ void HAL_GPIO_deinit(GPIO_reg_t *pGPIOx)
 	/* reset the GPIO port */
 	uint8_t port = GPIO_BASE_ADDR_TO_PORT_NUM(pGPIOx);
 	__GPIOx_RST(port);
+
+	/* disable the GPIO peripheral clock */
+	HAL_GPIO_pclk_ctrl(pGPIOx, false);
 }
 
 /*
