@@ -39,9 +39,6 @@
 //#define LED_TOGGLING_ON_BUTTON_PRESS_WO_INT
 #define LED_TOGGLING_ON_BUTTON_PRESS_W_INT
 
-#define ENABLE  (1U)
-#define DISABLE (0U)
-
 #define BUTTON_PRESSED    (0U)
 #define BUTTON_RELEASED   (1U)
 

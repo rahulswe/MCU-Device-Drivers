@@ -38,7 +38,7 @@
  * @brief        Enable or Disable SPI peripheral clock
  *
  * @param[in]    pSPIx : SPI peripheral base address
- * @param[in]    en    : 0 -> enable, 1 0-> disable
+ * @param[in]    en    : 0 -> disable, !0-> enable
  *
  * @return       None
  */
@@ -59,6 +59,37 @@ static void HAL_SPI_pclk_ctrl(SPI_reg_t *pSPIx, bool en)
 		else if(pSPIx == SPI2) { __SPI2_CLK_DIS(); }
 		else if(pSPIx == SPI3) { __SPI3_CLK_DIS(); }
 		else if(pSPIx == SPI4) { __SPI4_CLK_DIS(); }
+	}
+}
+
+/*
+ * @brief        Get SPI peripheral flag status
+ *
+ * @param[in]    pSPIx : SPI peripheral base address
+ * @param[in]    flag  : Bit mask of flag in SPI status register
+ *
+ * @return       flag status : 0(FLAG_NOT_SET) or 1(FLAG_SET)
+ */
+uint8_t HAL_SPI_flag_status(SPI_reg_t *pSPIx, uint8_t flag) {
+	if(pSPIx->SR & flag) {
+		return FLAG_SET;
+	}
+	return FLAG_NOT_SET;
+}
+
+/*
+ * @brief        Enable or Disable SPI peripheral
+ *
+ * @param[in]    pSPIx : SPI peripheral base address
+ * @param[in]    en    : 0 -> disable, !0-> enable
+ *
+ * @return       None
+ */
+void HAL_SPI_ctrl(SPI_reg_t *pSPIx, uint8_t en) {
+	if(en) {
+		pSPIx->CR1 |= (0x1 << BITP_SPI_CR1_SPE);
+	} else {
+		pSPIx->CR1 &= ~(0x1 << BITP_SPI_CR1_SPE);
 	}
 }
 
@@ -112,15 +143,29 @@ void HAL_SPI_init(SPI_handle_t *pSPIhandle)
 	/* set slave management type */
 	reg_val |= pSPIhandle->cfg.ssm << BITP_SPI_CR1_SSM;
 
-	/* set the SSI bit in case of master mode with SSM */
-	if((pSPIhandle->cfg.dev_mode == SPI_MASTER_MODE)
-		&& (pSPIhandle->cfg.ssm == SPI_SW_SLAVE_MGMT))
-	{
-		reg_val |= 0x1 << BITP_SPI_CR1_SSI;
+	/* configure slave management */
+	if(pSPIhandle->cfg.dev_mode == SPI_MASTER_MODE){
+		if(pSPIhandle->cfg.ssm == SPI_SW_SLAVE_MGMT) {
+			/* set the SSI bit to avoid MODF mode fault */
+			reg_val |= (0x1 << BITP_SPI_CR1_SSI); //NSS pin high
+		} else {  //SPI_HW_SLAVE_MGMT
+			/* set SSOE bit i.e. output enable to configure NSS pin
+		   * as slave select output controlled by the hardware */
+			pSPIhandle->pSPIx->CR2 |= (0x1 << BITP_SPI_CR2_SSOE);
+		}
+	} else{
+		if(pSPIhandle->cfg.ssm == SPI_SW_SLAVE_MGMT) {
+			/*  do nothing as by default SSI=0 i.e. NSS pin low */
+			//reg_val &= ~(0x1 << BITP_SPI_CR1_SSI);
+		} else {  //SPI_HW_SLAVE_MGMT
+			/* clear SSOE bit i.e. output disable to configure NSS pin
+			 * as slave select input controlled by the hardware */
+			pSPIhandle->pSPIx->CR2 &= ~(0x1 << BITP_SPI_CR2_SSOE);
+		}
 	}
 
 	/* enable the SPI peripheral */
-	reg_val |= 0x1 << BITP_SPI_CR1_SPE;
+	//reg_val |= 0x1 << BITP_SPI_CR1_SPE; //done through a separate function
 
 	/* set the SPI ctrl register with the
 	 * value as per specified configuration */
@@ -153,7 +198,7 @@ void HAL_SPI_deinit(SPI_reg_t *pSPIx)
  *
  * @param[in]    pSPIx     : SPI peripheral base address
  * @param[in]    pRxBuffer : Pointer to the buffer storing received data
- * @param[in]    len       : Size of data received (in bytes)
+ * @param[in]    len       : Size of data to be received (in bytes)
  *
  * @return       None
  */
@@ -164,7 +209,24 @@ void HAL_SPI_read_data(SPI_reg_t *pSPIx, uint8_t *pRxBuffer, uint32_t len)
 
 	if(len == 0) { return; }
 
-	// TODO:
+	/* check the data frame format */
+	uint8_t dff = (pSPIx->CR1 >> BITP_SPI_CR1_DFF) & 0x1;
+
+	/* iterate over len bytes */
+	while(len > 0) {
+		/* wait till HW Rx buffer is empty */
+		while(HAL_SPI_flag_status(pSPIx, SPI_SR_RXNE_FLAG) == FLAG_NOT_SET);
+
+		if(dff == SPI_DATA_FRAME_8BIT) {
+			*pRxBuffer = pSPIx->DR;
+			len--;
+			pRxBuffer++;
+		} else {
+			*((uint16_t*)pRxBuffer) = pSPIx->DR;
+			len--; len--;
+			pRxBuffer++; pRxBuffer++; //equivalent to (uint16_t*)pRxBuffer++;
+		}
+	}
 }
 
 /*
@@ -189,7 +251,7 @@ void HAL_SPI_send_data(SPI_reg_t *pSPIx, uint8_t *pTxBuffer, uint32_t len)
 	/* iterate over len bytes */
 	while(len > 0) {
 		/* wait till HW Tx buffer is not empty */
-		while(((pSPIx->SR >> BITP_SPI_SR_TXE) & 0x1) != 0x1);
+		while(HAL_SPI_flag_status(pSPIx, SPI_SR_TXE_FLAG) == FLAG_NOT_SET);
 
 		if(dff == SPI_DATA_FRAME_8BIT) {
 			pSPIx->DR = *pTxBuffer;

@@ -93,22 +93,35 @@ int main(void)
 			.cfg.cpol = SPI_CPOL_LOW,
 			.cfg.cpha = SPI_CPHA_FIRST_CLK_EDGE,
 			.cfg.dff = SPI_DATA_FRAME_8BIT,
-			.cfg.ssm = SPI_SW_SLAVE_MGMT
+			.cfg.ssm = SPI_HW_SLAVE_MGMT
 	};
 
 	/* initialize SPI peripheral */
 	HAL_SPI_init(&SPI1Handle);
+	/* enable the SPI peripheral */
+	HAL_SPI_ctrl(SPI1, ENABLE);
 
-	while(1) {
+	uint8_t n = 5;
+	while(n--) {
+
 		/* No slave connected
-		 * send a pattern data over MOSI line
-		 * and view it through logic analyzer
+		 * sending a pattern data over MOSI line
+		 * n times and checking via logic analyzer
 		 * */
-		char data[] = "SPI Driver";
+		char data[] = "Hello SPI";
+
+		/* wait if SPI peripheral is busy */
+		while(HAL_SPI_flag_status(SPI1, SPI_SR_BSY_FLAG));
+	    /* send data over MOSI line */
 		HAL_SPI_send_data(SPI1, (uint8_t*)data, strlen(data));
 	}
 
+	/* wait if SPI peripheral is busy */
+	while(HAL_SPI_flag_status(SPI1, SPI_SR_BSY_FLAG));
+	/* disable the SPI peripheral */
+	HAL_SPI_ctrl(SPI1, DISABLE);//HAL_SPI_deinit(SPI1);
+
     /* Loop forever */
-	// for(;;);
+	for(;;);
 }
 

@@ -54,6 +54,15 @@
 #define BITP_SPI_CR1_BIDIOE      (14U)
 #define BITP_SPI_CR1_BIDIMODE    (15U)
 
+/* bit positions in SPI_CR2 register */
+#define BITP_SPI_CR2_RXDMAEN       (0U)
+#define BITP_SPI_CR2_TXDMAEN       (1U)
+#define BITP_SPI_CR2_SSOE          (2U)
+#define BITP_SPI_CR2_FRF           (4U)
+#define BITP_SPI_CR2_ERRIE         (5U)
+#define BITP_SPI_CR2_RXNEIE        (6U)
+#define BITP_SPI_CR2_TXEIE         (7U)
+
 /* bit positions in SPI_SR register */
 #define BITP_SPI_SR_RXNE         (0U)
 #define BITP_SPI_SR_TXE          (1U)
@@ -122,7 +131,38 @@ typedef struct {
 #define SPI_SCLK_SPEED_PCLK_DIV128      (0x06U)
 #define SPI_SCLK_SPEED_PCLK_DIV256      (0x07U)
 
+/* SPI status register flags bit mask */
+#define SPI_SR_RXNE_FLAG                (0x1 << 0x00U)
+#define SPI_SR_TXE_FLAG                 (0x1 << 0x01U)
+#define SPI_SR_CHSIDE_FLAG              (0x1 << 0x02U)
+#define SPI_SR_UDR_FLAG                 (0x1 << 0x03U)
+#define SPI_SR_CRCERR_FLAG              (0x1 << 0x04U)
+#define SPI_SR_MODF_FLAG                (0x1 << 0x05U)
+#define SPI_SR_OVR_FLAG                 (0x1 << 0x06U)
+#define SPI_SR_BSY_FLAG                 (0x1 << 0x07U)
+#define SPI_SR_FRE_FLAG                 (0x1 << 0x08U)
+
 /* ***************** Function Declarations ******************* */
+
+/*
+ * @brief        Get SPI peripheral flag status
+ *
+ * @param[in]    pSPIx : SPI peripheral base address
+ * @param[in]    flag  : Bit mask of flag in SPI status register
+ *
+ * @return       flag status : 0(FLAG_NOT_SET) or 1(FLAG_SET)
+ */
+uint8_t HAL_SPI_flag_status(SPI_reg_t *pSPIx, uint8_t flag);
+
+/*
+ * @brief        Enable or Disable SPI peripheral
+ *
+ * @param[in]    pSPIx : SPI peripheral base address
+ * @param[in]    en    : 0 -> disable, !0-> enable
+ *
+ * @return       None
+ */
+void HAL_SPI_ctrl(SPI_reg_t *pSPIx, uint8_t en);
 
 /*
  * @brief        Initialize/Setup/Configure SPI peripheral
@@ -149,7 +189,7 @@ void HAL_SPI_deinit(SPI_reg_t *pSPIx);
  *
  * @param[in]    pSPIx     : SPI peripheral base address
  * @param[in]    pRxBuffer : Pointer to the buffer storing received data
- * @param[in]    len       : Size of data received (in bytes)
+ * @param[in]    len       : Size of data to be received (in bytes)
  *
  * @return       None
  *

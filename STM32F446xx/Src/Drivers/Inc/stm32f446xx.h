@@ -43,6 +43,11 @@
 /* NULL pointer check macro */
 #define NULL_PTR_CHK(x) if(x == NULL) { return; }
 
+#define ENABLE          (1U)
+#define DISABLE         (0U)
+#define FLAG_SET        (1U)
+#define FLAG_NOT_SET    (0U)
+
 /* ********* Cortex-M4 Processor Specific Registers ********** */
 
 #define NVIC_ISER0             ((volatile uint32_t*)0xE000E100U)
