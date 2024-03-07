@@ -1,8 +1,8 @@
 /*
  ******************************************************************************
- * @file      main_spi.c
+ * @file      main_spi_slave.c
  * @author    Rahul Singh
- * @brief     Sample application file for testing STM32F446xx SPI driver - master
+ * @brief     Sample application file for testing STM32F446xx SPI driver - slave
  *
  ******************************************************************************
  *
@@ -33,7 +33,6 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <string.h>
 
 #include "stm32f446xx_hal_gpio.h"
@@ -44,26 +43,8 @@ void sw_delay() {
 	for(uint32_t i = 0; i < 300000; i++);
 }
 
-/* flag to monitor button press status */
-uint8_t g_button_pressed = false;
-
 int main(void)
 {
-	/* configuration for GPIO pin connected to button on NUCLEOF446RE board */
-	GPIO_handle_t GPIO_BUTTON_handle = {
-			.pGPIOx = GPIOC,
-			.cfg.pin_number = GPIO_PIN_13, //Button Pin
-			.cfg.pin_mode = GPIO_PIN_MODE_IT_FT, //interrupt falling edge trigger mode
-			.cfg.pin_otype = 0x00, //reset value
-			.cfg.pin_ospeed = 0x00, //reset value
-			.cfg.pupd_ctrl = GPIO_PIN_NO_PULL_UP_DOWN, //external pull-up present
-			.cfg.alt_func = 0x00 //reset value
-	};
-
-	/* Initialize the GPIO pin for Button with interrupt on falling edge */
-	HAL_GPIO_init(&GPIO_BUTTON_handle);
-	HAL_GPIO_IRQ_config(IRQ_NO_EXTI15_10, 14, ENABLE);
-
 	/* configure SPI GPIOs for STM32F446RE Nucleo Board */
 
 	/*
@@ -103,7 +84,7 @@ int main(void)
 	/* configure SPI peripheral */
 	SPI_handle_t SPI1Handle = {
 			.pSPIx = SPI1,
-			.cfg.dev_mode = SPI_MASTER_MODE,
+			.cfg.dev_mode = SPI_SLAVE_MODE,
 			.cfg.comm_mode = SPI_COMM_MODE_FULL_DUPLEX,
 			.cfg.speed = SPI_SCLK_SPEED_PCLK_DIV32,
 			.cfg.cpol = SPI_CPOL_LOW,
@@ -115,20 +96,12 @@ int main(void)
 	/* initialize SPI peripheral */
 	HAL_SPI_init(&SPI1Handle);
 	/* enable the SPI peripheral */
-	HAL_SPI_ctrl(SPI1, ENABLE);
+    HAL_SPI_ctrl(SPI1, ENABLE);
 
 	while(1) {
-		/* wait until user button is pressed */
-		while(!g_button_pressed);
-
-		/* reset the flag for next interrupt */
-		g_button_pressed = false;
-
-		/* sending a pattern data over MOSI line */
-		char data[] = "Hello SPI";
-
-	    /* send data over MOSI line */
-		HAL_SPI_send_data(SPI1, (uint8_t*)data, sizeof(data));
+		char data[10];
+		HAL_SPI_read_data(SPI1, (uint8_t*)data, 10);
+		printf("String received = %s\n", data);
 	}
 
 	/* wait if SPI peripheral is busy
@@ -137,19 +110,5 @@ int main(void)
 	HAL_SPI_ctrl(SPI1, DISABLE);//HAL_SPI_deinit(SPI1);*/
 
     /* Loop forever */
-	//for(;;);
-}
-
-/* EXTI IRQ Handler for the GPIO pins
- * corresponding to the Button
- * */
-void EXTI15_10_IRQHandler(void)
-{
-	/* clear the IRQ pending bit for GPIO pin of button */
-	HAL_GPIO_IRQ_handler(GPIO_PIN_13);
-
-	/* set the button pressed flag with some
-	 * delay to handle button de-bouncing */
-	sw_delay();
-	g_button_pressed = true;
+	// for(;;);
 }
