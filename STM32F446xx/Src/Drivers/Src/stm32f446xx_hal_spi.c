@@ -34,6 +34,11 @@
 #include <stdbool.h>
 #include "stm32f446xx_hal_spi.h"
 
+/* SPI interrupt events handler declaration */
+static void _HAL_SPI_rxne_evt_handler(SPI_handle_t *pSPIhandle);
+static void _HAL_SPI_txe_evt_handler(SPI_handle_t *pSPIhandle);
+static void _HAL_SPI_err_evt_handler(SPI_handle_t *pSPIhandle);
+
 /*
  * @brief        Enable or Disable SPI peripheral clock
  *
@@ -42,7 +47,7 @@
  *
  * @return       None
  */
-static void HAL_SPI_pclk_ctrl(SPI_reg_t *pSPIx, bool en)
+static void _HAL_SPI_pclk_ctrl(SPI_reg_t *pSPIx, bool en)
 {
 	NULL_PTR_CHK(pSPIx);
 
@@ -107,7 +112,7 @@ void HAL_SPI_init(SPI_handle_t *pSPIhandle)
 	uint32_t reg_val = 0;
 
 	/* enable the SPI peripheral clock */
-	HAL_SPI_pclk_ctrl(pSPIhandle->pSPIx, true);
+	_HAL_SPI_pclk_ctrl(pSPIhandle->pSPIx, true);
 
 	/* set device mode */
 	reg_val |= pSPIhandle->cfg.dev_mode << BITP_SPI_CR1_MSTR;
@@ -190,7 +195,7 @@ void HAL_SPI_deinit(SPI_reg_t *pSPIx)
 	else if(pSPIx == SPI4) { __SPI4_RST(); }
 
 	/* disable the SPI peripheral clock */
-	HAL_SPI_pclk_ctrl(pSPIx, false);
+	_HAL_SPI_pclk_ctrl(pSPIx, false);
 }
 
 /*
@@ -207,6 +212,7 @@ void HAL_SPI_read_data(SPI_reg_t *pSPIx, uint8_t *pRxBuffer, uint32_t len)
 	NULL_PTR_CHK(pSPIx);
 	NULL_PTR_CHK(pRxBuffer);
 
+	/* if there is nothing to be received then return */
 	if(len == 0) { return; }
 
 	/* check the data frame format */
@@ -243,6 +249,7 @@ void HAL_SPI_send_data(SPI_reg_t *pSPIx, uint8_t *pTxBuffer, uint32_t len)
 	NULL_PTR_CHK(pSPIx);
 	NULL_PTR_CHK(pTxBuffer);
 
+	/* if there is nothing to be sent then return */
 	if(len == 0) { return; }
 
 	/* check the data frame format */
@@ -263,4 +270,265 @@ void HAL_SPI_send_data(SPI_reg_t *pSPIx, uint8_t *pTxBuffer, uint32_t len)
 			pTxBuffer++; pTxBuffer++;
 		}
 	}
+}
+
+/*
+ * @brief        Read data over SPI peripheral (non-blocking mode)
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ * @param[in]    pRxBuffer : Pointer to the buffer storing received data
+ * @param[in]    len       : Size of data to be received (in bytes)
+ *
+ * @return       SPI peripheral Rx state when this function is called
+ *
+ */
+uint8_t HAL_SPI_read_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pRxBuffer, uint32_t len)
+{
+	if(pSPIhandle == NULL) { return 0xFF; }
+	if(pRxBuffer == NULL) { return 0xFF; }
+
+	/* if there is nothing to be received then return */
+	if(len == 0) { return 0xFF; }
+
+	uint8_t rxState = pSPIhandle->rxState;
+
+	if(rxState == HAL_SPI_READY)
+	{
+		/* store address of the buffer where
+		 * the received data needs to be stored
+		 * and the size of data */
+		pSPIhandle->pRxBuff = pRxBuffer;
+		pSPIhandle->rxLen = len;
+
+		/* set the SPI RX busy status */
+		pSPIhandle->rxState = HAL_SPI_BUSY_IN_RX;
+
+		/* enable RXNE interrupt to processor when data is received */
+		pSPIhandle->pSPIx->CR2 |= (0x1 << BITP_SPI_CR2_RXNEIE);
+	}
+
+	return rxState;
+}
+
+/*
+ * @brief        Send data over SPI peripheral (non-blocking mode)
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ * @param[in]    pTxBuffer : Pointer to the buffer sending data to be sent
+ * @param[in]    len       : Size of data to be sent (in bytes)
+ *
+ * @return       SPI peripheral Tx state when this function is called
+ *
+ */
+uint8_t HAL_SPI_send_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pTxBuffer, uint32_t len)
+{
+	if(pSPIhandle == NULL) { return 0xFF; }
+	if(pTxBuffer == NULL) { return 0xFF; }
+
+	/* if there is nothing to be sent then return */
+	if(len == 0) { return 0xFF; }
+
+	uint8_t txState = pSPIhandle->txState;
+
+	if(txState == HAL_SPI_READY)
+	{
+		/* store address of the buffer where
+		 * the data to be sent is stored
+		 * and the size of data */
+		pSPIhandle->pTxBuff = pTxBuffer;
+		pSPIhandle->txLen = len;
+
+		/* set the SPI TX busy status */
+		pSPIhandle->txState = HAL_SPI_BUSY_IN_TX;
+
+		/* enable TXE interrupt to processor when SPI TX buffer is empty */
+		pSPIhandle->pSPIx->CR2 |= (0x1 << BITP_SPI_CR2_TXEIE);
+	}
+
+	return txState;
+}
+
+/*
+ * @brief        Configure the IRQ for a SPI peripheral
+ *
+ * @param[in]    IRQ_num  : IRQ number for a specific SPI peripheral
+ * @param[in]    IRQ_prio : Priority level for the specified IRQ (0 to 16)
+ * @param[in]    en       : 1 -> enable the IRQ, 0-> Disable the IRQ
+ *
+ * @return       None
+ *
+ */
+void HAL_SPI_IRQ_config(uint32_t IRQ_num, uint32_t IRQ_prio, uint8_t en)
+{
+	/* set the priority level for the IRQn in the NVIC */
+	__NVIC_SET_PRIORITY(IRQ_num, IRQ_prio);
+
+	/* enable or disable the IRQn in the NVIC */
+	if(en) {
+		__NVIC_ENABLE_IRQ(IRQ_num);
+	} else {
+		__NVIC_DISABLE_IRQ(IRQ_num);
+	}
+}
+
+/*
+ * @brief        SPI IRQ handler
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ *
+ * @return       None
+ *
+ */
+void HAL_SPI_IRQ_handler(SPI_handle_t *pSPIhandle)
+{
+	NULL_PTR_CHK(pSPIhandle);
+
+	uint8_t status = pSPIhandle->pSPIx->SR;
+	uint8_t cr2_val = pSPIhandle->pSPIx->CR2;
+
+	/* check which SPI event generated the interrupt
+	 * and call the respective handler to service it */
+
+	/* checking if Rx buffer not empty
+	 * event generated the interrupt */
+	if((cr2_val & (0x1 << BITP_SPI_CR2_RXNEIE))
+		&& (status & (0x1 << BITP_SPI_SR_RXNE)))
+	{
+		_HAL_SPI_rxne_evt_handler(pSPIhandle);
+	}
+	/* checking if Tx buffer empty event
+	* generated the interrupt */
+	if((cr2_val & (0x1 << BITP_SPI_CR2_TXEIE))
+			&& (status & (0x1 << BITP_SPI_SR_TXE)))
+	{
+		_HAL_SPI_txe_evt_handler(pSPIhandle);
+	}
+	/* checking if any SPI error event
+	 * generated the interrupt */
+	if(cr2_val & (0x1 << BITP_SPI_CR2_ERRIE))
+	{
+		_HAL_SPI_err_evt_handler(pSPIhandle);
+		/*
+		if(status & (0x1 << BITP_SPI_SR_OVR)) {
+
+		} else if(status & (0x1 << BITP_SPI_SR_CRCERR)) {
+
+		} else if(status & (0x1 << BITP_SPI_SR_OVR)) {
+
+		}
+		*/
+	}
+}
+
+/*
+ * @brief        Callback function for the application
+ *               to handle different possible SPI event
+ *
+ * @param[in]    pSPIhandle : Pointer to SPI handle object
+ * @param[in]    evt        : SPI event that called this function
+ *
+ * @return       None
+ *
+ */
+__attribute((weak)) void HAL_SPI_app_evt_callback(
+		SPI_handle_t *pSPIhandle, uint8_t evt)
+{
+    /* weak implementation - doing nothing */
+}
+
+/*
+ * @brief        SPI RXNE interrupt event handler
+ *               to receive a data frame
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_SPI_rxne_evt_handler(SPI_handle_t *pSPIhandle) {
+	NULL_PTR_CHK(pSPIhandle);
+
+	if(pSPIhandle->rxLen == 0) { return; }
+
+	/* check the data frame format */
+	uint8_t dff = (pSPIhandle->pSPIx->CR1 >> BITP_SPI_CR1_DFF) & 0x1;
+
+	/* receive a data frame */
+	if(dff == SPI_DATA_FRAME_8BIT) {
+		*pSPIhandle->pRxBuff = pSPIhandle->pSPIx->DR;
+		pSPIhandle->rxLen--;
+		pSPIhandle->pRxBuff++;
+	} else {
+		*((uint16_t*)pSPIhandle->pRxBuff) = pSPIhandle->pSPIx->DR;
+		pSPIhandle->rxLen--; pSPIhandle->rxLen--;
+		(uint16_t*)pSPIhandle->pRxBuff++;
+	}
+
+	/* check if all the bytes have been received */
+	if(pSPIhandle->rxLen == 0) {
+		/* reset the SPI S/W Rx buffer ptr and state */
+		pSPIhandle->pRxBuff = NULL;
+		pSPIhandle->rxState  = HAL_SPI_READY;
+		/* disable RXNE interrupt as data rx is completed */
+		pSPIhandle->pSPIx->CR2 &= ~(0x1 << BITP_SPI_CR2_RXNEIE);
+		/* notify the application that SPI Rx is completed */
+		HAL_SPI_app_evt_callback(pSPIhandle, HAL_SPI_RX_DONE);
+	}
+}
+
+/*
+ * @brief        SPI TXE interrupt event handler
+ *               to send a data frame
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_SPI_txe_evt_handler(SPI_handle_t *pSPIhandle) {
+	NULL_PTR_CHK(pSPIhandle);
+
+	if(pSPIhandle->txLen == 0) { return; }
+
+	/* check the data frame format */
+	uint8_t dff = (pSPIhandle->pSPIx->CR1 >> BITP_SPI_CR1_DFF) & 0x1;
+
+	/* send a data frame */
+	if(dff == SPI_DATA_FRAME_8BIT) {
+		pSPIhandle->pSPIx->DR = *pSPIhandle->pTxBuff;
+		pSPIhandle->txLen--;
+		pSPIhandle->pTxBuff++;
+	} else {
+		pSPIhandle->pSPIx->DR = *((uint16_t*)pSPIhandle->pTxBuff);
+		pSPIhandle->txLen--; pSPIhandle->txLen--;
+		pSPIhandle->pTxBuff++; pSPIhandle->pTxBuff++;
+	}
+
+	/* check if all the bytes have been sent */
+	if(pSPIhandle->txLen == 0) {
+		/* reset the SPI S/W Tx buffer ptr and state */
+		pSPIhandle->pTxBuff = NULL;
+		pSPIhandle->txState  = HAL_SPI_READY;
+		/* disable TXE interrupt as data tx is completed */
+		pSPIhandle->pSPIx->CR2 &= ~(0x1 << BITP_SPI_CR2_TXEIE);
+		/* notify the application that SPI Tx is completed */
+		HAL_SPI_app_evt_callback(pSPIhandle, HAL_SPI_TX_DONE);
+	}
+}
+
+/*
+ * @brief        SPI ERR interrupt event handler
+ *               to report the error
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_SPI_err_evt_handler(SPI_handle_t *pSPIhandle) {
+	NULL_PTR_CHK(pSPIhandle);
+
+	/* notify the application that SPI peripheral
+	 * generated an interrupt reporting some error */
+	HAL_SPI_app_evt_callback(pSPIhandle, HAL_SPI_ERR_REPORTED);
 }

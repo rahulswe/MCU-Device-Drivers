@@ -36,44 +36,6 @@
 
 #include "stm32f446xx.h"
 
-/* ***************** Enum Definitions ******************* */
-
-/* bit positions in SPI_CR1 register */
-#define BITP_SPI_CR1_CPHA        (0U)
-#define BITP_SPI_CR1_CPOL        (1U)
-#define BITP_SPI_CR1_MSTR        (2U)
-#define BITP_SPI_CR1_BR          (3U)
-#define BITP_SPI_CR1_SPE         (6U)
-#define BITP_SPI_CR1_LSBFIRST    (7U)
-#define BITP_SPI_CR1_SSI         (8U)
-#define BITP_SPI_CR1_SSM         (9U)
-#define BITP_SPI_CR1_RXONLY      (10U)
-#define BITP_SPI_CR1_DFF         (11U)
-#define BITP_SPI_CR1_CRCNEXT     (12U)
-#define BITP_SPI_CR1_CRCEN       (13U)
-#define BITP_SPI_CR1_BIDIOE      (14U)
-#define BITP_SPI_CR1_BIDIMODE    (15U)
-
-/* bit positions in SPI_CR2 register */
-#define BITP_SPI_CR2_RXDMAEN       (0U)
-#define BITP_SPI_CR2_TXDMAEN       (1U)
-#define BITP_SPI_CR2_SSOE          (2U)
-#define BITP_SPI_CR2_FRF           (4U)
-#define BITP_SPI_CR2_ERRIE         (5U)
-#define BITP_SPI_CR2_RXNEIE        (6U)
-#define BITP_SPI_CR2_TXEIE         (7U)
-
-/* bit positions in SPI_SR register */
-#define BITP_SPI_SR_RXNE         (0U)
-#define BITP_SPI_SR_TXE          (1U)
-#define BITP_SPI_SR_CHSIDE       (2U)
-#define BITP_SPI_SR_UDR          (3U)
-#define BITP_SPI_SR_CRCERR       (4U)
-#define BITP_SPI_SR_MODF         (5U)
-#define BITP_SPI_SR_OVR          (6U)
-#define BITP_SPI_SR_BSY          (7U)
-#define BITP_SPI_SR_FRE          (8U)
-
 /* ***************** Structure Definitions ******************* */
 
 /* SPI configuration structure */
@@ -91,6 +53,12 @@ typedef struct {
 typedef struct {
 	SPI_reg_t *pSPIx;
 	SPI_cfg_t cfg;
+	uint8_t *pTxBuff;
+	uint32_t txLen;
+	uint8_t txState;
+	uint8_t *pRxBuff;
+	uint32_t rxLen;
+	uint8_t rxState;
 }SPI_handle_t;
 
 /* ******************* Macro Definitions ********************* */
@@ -119,7 +87,6 @@ typedef struct {
 #define SPI_COMM_MODE_FULL_DUPLEX       (0x00U)
 #define SPI_COMM_MODE_HALF_DUPLEX       (0x01U)
 #define SPI_COMM_MODE_SIMPLEX_RX        (0x02U)
-//SIMPLEX_TX is same as duplex -> the received data over MISO be ignored and remove the MISO line
 
 /* SPI SCLK speed */
 #define SPI_SCLK_SPEED_PCLK_DIV2        (0x00U)
@@ -141,6 +108,53 @@ typedef struct {
 #define SPI_SR_OVR_FLAG                 (0x1 << 0x06U)
 #define SPI_SR_BSY_FLAG                 (0x1 << 0x07U)
 #define SPI_SR_FRE_FLAG                 (0x1 << 0x08U)
+
+/* bit positions in SPI_CR1 register */
+#define BITP_SPI_CR1_CPHA               (0U)
+#define BITP_SPI_CR1_CPOL               (1U)
+#define BITP_SPI_CR1_MSTR               (2U)
+#define BITP_SPI_CR1_BR                 (3U)
+#define BITP_SPI_CR1_SPE                (6U)
+#define BITP_SPI_CR1_LSBFIRST           (7U)
+#define BITP_SPI_CR1_SSI                (8U)
+#define BITP_SPI_CR1_SSM                (9U)
+#define BITP_SPI_CR1_RXONLY             (10U)
+#define BITP_SPI_CR1_DFF                (11U)
+#define BITP_SPI_CR1_CRCNEXT            (12U)
+#define BITP_SPI_CR1_CRCEN              (13U)
+#define BITP_SPI_CR1_BIDIOE             (14U)
+#define BITP_SPI_CR1_BIDIMODE           (15U)
+
+/* bit positions in SPI_CR2 register */
+#define BITP_SPI_CR2_RXDMAEN            (0U)
+#define BITP_SPI_CR2_TXDMAEN            (1U)
+#define BITP_SPI_CR2_SSOE               (2U)
+#define BITP_SPI_CR2_FRF                (4U)
+#define BITP_SPI_CR2_ERRIE              (5U)
+#define BITP_SPI_CR2_RXNEIE             (6U)
+#define BITP_SPI_CR2_TXEIE              (7U)
+
+/* bit positions in SPI_SR register */
+#define BITP_SPI_SR_RXNE                (0U)
+#define BITP_SPI_SR_TXE                 (1U)
+#define BITP_SPI_SR_CHSIDE              (2U)
+#define BITP_SPI_SR_UDR                 (3U)
+#define BITP_SPI_SR_CRCERR              (4U)
+#define BITP_SPI_SR_MODF                (5U)
+#define BITP_SPI_SR_OVR                 (6U)
+#define BITP_SPI_SR_BSY                 (7U)
+#define BITP_SPI_SR_FRE                 (8U)
+
+
+/* SPI peripheral state */
+#define HAL_SPI_READY                   (0U)
+#define HAL_SPI_BUSY_IN_TX              (1U)
+#define HAL_SPI_BUSY_IN_RX              (2U)
+
+/* SPI events */
+#define HAL_SPI_TX_DONE                 (0U)
+#define HAL_SPI_RX_DONE                 (1U)
+#define HAL_SPI_ERR_REPORTED            (2U)
 
 /* ***************** Function Declarations ******************* */
 
@@ -185,7 +199,7 @@ void HAL_SPI_init(SPI_handle_t *pSPIhandle);
 void HAL_SPI_deinit(SPI_reg_t *pSPIx);
 
 /*
- * @brief        Read data over SPI peripheral
+ * @brief        Read data over SPI peripheral (blocking mode)
  *
  * @param[in]    pSPIx     : SPI peripheral base address
  * @param[in]    pRxBuffer : Pointer to the buffer storing received data
@@ -197,7 +211,7 @@ void HAL_SPI_deinit(SPI_reg_t *pSPIx);
 void HAL_SPI_read_data(SPI_reg_t *pSPIx, uint8_t *pRxBuffer, uint32_t len);
 
 /*
- * @brief        Send data over SPI peripheral
+ * @brief        Send data over SPI peripheral (blocking mode)
  *
  * @param[in]    pSPIx     : SPI peripheral base address
  * @param[in]    pTxBuffer : Pointer to the buffer sending data to be sent
@@ -207,5 +221,64 @@ void HAL_SPI_read_data(SPI_reg_t *pSPIx, uint8_t *pRxBuffer, uint32_t len);
  *
  */
 void HAL_SPI_send_data(SPI_reg_t *pSPIx, uint8_t *pTxBuffer, uint32_t len);
+
+/*
+ * @brief        Read data over SPI peripheral (non-blocking mode)
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ * @param[in]    pRxBuffer : Pointer to the buffer storing received data
+ * @param[in]    len       : Size of data to be received (in bytes)
+ *
+ * @return       SPI peripheral Rx state when this function is called
+ *
+ */
+uint8_t HAL_SPI_read_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pRxBuffer, uint32_t len);
+
+/*
+ * @brief        Send data over SPI peripheral (non-blocking mode)
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ * @param[in]    pTxBuffer : Pointer to the buffer sending data to be sent
+ * @param[in]    len       : Size of data to be sent (in bytes)
+ *
+ * @return       SPI peripheral Tx state when this function is called
+ *
+ */
+uint8_t HAL_SPI_send_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pTxBuffer, uint32_t len);
+
+/*
+ * @brief        Configure the IRQ for a SPI peripheral
+ *
+ * @param[in]    IRQ_num  : IRQ number for a specific SPI peripheral
+ * @param[in]    IRQ_prio : Priority level for the specified IRQ (0 to 16)
+ * @param[in]    en       : 1 -> enable the IRQ, 0-> Disable the IRQ
+ *
+ * @return       None
+ *
+ */
+void HAL_SPI_IRQ_config(uint32_t IRQ_num, uint32_t IRQ_prio, uint8_t en);
+
+/*
+ * @brief        SPI IRQ handler
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ *
+ * @return       None
+ *
+ */
+void HAL_SPI_IRQ_handler(SPI_handle_t *pSPIhandle);
+
+/*
+ * @brief        Callback function for the application
+ *               to handle different possible SPI event
+ *
+ * @param[in]    pSPIhandle : Pointer to SPI handle object
+ * @param[in]    evt        : SPI event that called this function
+ *
+ * @return       None
+ *
+ */
+void HAL_SPI_app_evt_callback(
+		SPI_handle_t *pSPIhandle, uint8_t evt);
 
 #endif

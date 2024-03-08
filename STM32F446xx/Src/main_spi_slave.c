@@ -2,7 +2,8 @@
  ******************************************************************************
  * @file      main_spi_slave.c
  * @author    Rahul Singh
- * @brief     Sample application file for testing STM32F446xx SPI driver - slave
+ * @brief     Sample application file for testing STM32F446xx SPI driver
+ *            APIs as a slave device
  *
  ******************************************************************************
  *

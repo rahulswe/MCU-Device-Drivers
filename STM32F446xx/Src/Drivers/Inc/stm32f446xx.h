@@ -104,6 +104,11 @@
 #define IRQ_NO_EXTI9_5       (23U)
 #define IRQ_NO_EXTI15_10     (40U)
 
+#define IRQ_NO_SPI1          (35U)
+#define IRQ_NO_SPI2          (36U)
+#define IRQ_NO_SPI3          (51U)
+#define IRQ_NO_SPI4          (84U)
+
 /* ********** Register Set Structure Definitions ********** */
 
 /* GPIO Register Set Structure Definition */
