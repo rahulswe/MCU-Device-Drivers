@@ -53,6 +53,11 @@ char gRxData[10];
 /* flag to track if data has been received over SPI */
 uint8_t gbDataReceived = 0;
 
+/* keeping some valid same interrupt
+ * prio value for all the interrupts
+ * defined in this application */
+#define DEFAULT_INT_PRIO    (14U)
+
 int main(void)
 {
 	/* configure SPI GPIOs for STM32F446RE Nucleo Board */
@@ -108,7 +113,7 @@ int main(void)
 	/* initialize SPI peripheral */
 	HAL_SPI_init(&gSPI1Handle);
 	/* enable SPI interrupt */
-	HAL_SPI_IRQ_config(IRQ_NO_SPI1, 14, ENABLE);//handle default irq prio
+	HAL_SPI_IRQ_config(IRQ_NO_SPI1, DEFAULT_INT_PRIO, ENABLE);
 
 	//gbDataReceived = 0;
 

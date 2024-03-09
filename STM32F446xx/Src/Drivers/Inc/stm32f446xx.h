@@ -48,6 +48,18 @@
 #define FLAG_SET        (1U)
 #define FLAG_NOT_SET    (0U)
 
+#define NUM_BITS_IN_A_BYTE            (8U)
+/* 4 most significant bits in NVIC priority register's PRI_X 8-bit field
+ * are implemented to define 16 possible priority levels (0 to 15) */
+#define NUM_VALID_INT_PRIO_BITS       (4U)
+/* Bit position in the interrupt priority registers's
+ * PRI_X 8-bit field, from where the valid bits starts */
+#define VALID_INT_PRIO_BIT_START_POS  ((NUM_BITS_IN_A_BYTE) - (NUM_VALID_INT_PRIO_BITS))
+/* Priority of 4 interrupts can be set per NVIC priority register */
+#define NUM_INT_PRIO_PER_REG          (4U)
+/* No. of interrupts which can be enabled per NVIC ISER register */
+#define NUM_INT_PER_NVIC_ISER_REG     (32U)
+
 /* ********* Cortex-M4 Processor Specific Registers ********** */
 
 #define NVIC_ISER0             ((volatile uint32_t*)0xE000E100U)
@@ -273,12 +285,16 @@ typedef struct {
 #define __EXTI_LINE_CLR_INT(pin_num)     (EXTI->PR |= (1 << pin_num))
 
 /* Enable specific IRQ number in NVIC */
-#define __NVIC_ENABLE_IRQ(irq_num)       { *(NVIC_ISER0 + (irq_num/32)) |= (1 << (irq_num % 32)); }
+#define __NVIC_ENABLE_IRQ(irq_num)       { *(NVIC_ISER0 + (irq_num/NUM_INT_PER_NVIC_ISER_REG)) \
+	                                          |= (1 << (irq_num % NUM_INT_PER_NVIC_ISER_REG)); }
 /* Disable specific IRQ number in NVIC */
-#define __NVIC_DISABLE_IRQ(irq_num)      { *(NVIC_ICER0 + (irq_num/32)) |= (1 << (irq_num % 32)); }
+#define __NVIC_DISABLE_IRQ(irq_num)      { *(NVIC_ICER0 + (irq_num/NUM_INT_PER_NVIC_ISER_REG)) \
+	                                          |= (1 << (irq_num % NUM_INT_PER_NVIC_ISER_REG)); }
 /* Set priority for a specific IRQ number in NVIC */
-#define __NVIC_SET_PRIORITY(irq_num, priority_val)    { uint8_t reg_idx = IRQ_num/4, pos = (IRQ_num % 4) << 0x3; \
+#define __NVIC_SET_PRIORITY(irq_num, irq_priority)    { uint8_t reg_idx = irq_num/NUM_INT_PRIO_PER_REG;\
+	                                                    uint8_t pos = VALID_INT_PRIO_BIT_START_POS + \
+														    ((irq_num % NUM_INT_PRIO_PER_REG) << 0x3); \
 		                                                *(NVIC_IPR0 + reg_idx) &= ~(0xFF << pos); \
-		                                                *(NVIC_IPR0 + reg_idx) |= ((IRQ_prio << 0x4) << pos); \
+		                                                *(NVIC_IPR0 + reg_idx) |= ((irq_priority) << pos); \
 	                                                  }
 #endif

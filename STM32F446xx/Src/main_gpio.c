@@ -47,6 +47,11 @@ void sw_delay() {
 	for(uint32_t i = 0; i < 300000; i++);
 }
 
+/* keeping some valid same interrupt
+ * prio value for all the interrupts
+ * defined in this application */
+#define DEFAULT_INT_PRIO    (14U)
+
 int main(void)
 {
 #if defined(LED_TOGGLING_ON_BUTTON_PRESS_WO_INT)
@@ -125,7 +130,7 @@ int main(void)
 
 	/* Initialize the GPIO pin for Button with interrupt on falling edge */
 	HAL_GPIO_init(&GPIO_BUTTON_handle);
-	HAL_GPIO_IRQ_config(IRQ_NO_EXTI15_10, 14, ENABLE);
+	HAL_GPIO_IRQ_config(IRQ_NO_EXTI15_10, DEFAULT_INT_PRIO, ENABLE);
 
 #endif
     /* Loop forever */

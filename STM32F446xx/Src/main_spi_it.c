@@ -51,6 +51,11 @@ uint8_t g_button_pressed = false;
 /* SPI1 handle object */
 SPI_handle_t gSPI1Handle;
 
+/* keeping some valid same interrupt
+ * prio value for all the interrupts
+ * defined in this application */
+#define DEFAULT_INT_PRIO    (14U)
+
 int main(void)
 {
 	/* configuration for GPIO pin connected to button on NUCLEOF446RE board */
@@ -66,7 +71,7 @@ int main(void)
 
 	/* Initialize the GPIO pin for Button with interrupt on falling edge */
 	HAL_GPIO_init(&GPIO_BUTTON_handle);
-	HAL_GPIO_IRQ_config(IRQ_NO_EXTI15_10, 14, ENABLE);
+	HAL_GPIO_IRQ_config(IRQ_NO_EXTI15_10, DEFAULT_INT_PRIO, ENABLE);
 
 	/* configure SPI GPIOs for STM32F446RE Nucleo Board */
 
@@ -121,7 +126,7 @@ int main(void)
 	/* initialize SPI peripheral */
 	HAL_SPI_init(&gSPI1Handle);
 	/* enable SPI interrupt */
-	HAL_SPI_IRQ_config(IRQ_NO_SPI1, 14, ENABLE);
+	HAL_SPI_IRQ_config(IRQ_NO_SPI1, DEFAULT_INT_PRIO, ENABLE);
 
 	while(1) {
 		/* wait until user button is pressed */
