@@ -145,16 +145,23 @@ typedef struct {
 #define BITP_SPI_SR_BSY                 (7U)
 #define BITP_SPI_SR_FRE                 (8U)
 
+/* ******************* Enum Definitions ********************* */
 
 /* SPI peripheral state */
-#define HAL_SPI_READY                   (0U)
-#define HAL_SPI_BUSY_IN_TX              (1U)
-#define HAL_SPI_BUSY_IN_RX              (2U)
+typedef enum {
+	HAL_SPI_READY = 0,
+	HAL_SPI_BUSY_IN_TX,
+	HAL_SPI_BUSY_IN_RX,
+	HAL_SPI_NUM_STATES
+} HAL_SPI_state_t;
 
 /* SPI events */
-#define HAL_SPI_TX_DONE                 (0U)
-#define HAL_SPI_RX_DONE                 (1U)
-#define HAL_SPI_ERR_REPORTED            (2U)
+typedef enum {
+	HAL_SPI_TX_DONE = 0,
+	HAL_SPI_RX_DONE,
+	HAL_SPI_ERR_REPORTED,
+	HAL_SPI_NUM_EVENTS
+} HAL_SPI_events_t;
 
 /* ***************** Function Declarations ******************* */
 
@@ -232,7 +239,7 @@ void HAL_SPI_send_data(SPI_reg_t *pSPIx, uint8_t *pTxBuffer, uint32_t len);
  * @return       SPI peripheral Rx state when this function is called
  *
  */
-uint8_t HAL_SPI_read_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pRxBuffer, uint32_t len);
+HAL_SPI_state_t HAL_SPI_read_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pRxBuffer, uint32_t len);
 
 /*
  * @brief        Send data over SPI peripheral (non-blocking mode)
@@ -244,7 +251,7 @@ uint8_t HAL_SPI_read_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pRxBuffer, uint3
  * @return       SPI peripheral Tx state when this function is called
  *
  */
-uint8_t HAL_SPI_send_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pTxBuffer, uint32_t len);
+HAL_SPI_state_t HAL_SPI_send_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pTxBuffer, uint32_t len);
 
 /*
  * @brief        Configure the IRQ for a SPI peripheral
@@ -279,6 +286,6 @@ void HAL_SPI_IRQ_handler(SPI_handle_t *pSPIhandle);
  *
  */
 void HAL_SPI_app_evt_callback(
-		SPI_handle_t *pSPIhandle, uint8_t evt);
+		SPI_handle_t *pSPIhandle, HAL_SPI_events_t evt);
 
 #endif

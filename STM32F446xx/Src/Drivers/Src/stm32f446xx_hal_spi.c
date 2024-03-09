@@ -282,7 +282,7 @@ void HAL_SPI_send_data(SPI_reg_t *pSPIx, uint8_t *pTxBuffer, uint32_t len)
  * @return       SPI peripheral Rx state when this function is called
  *
  */
-uint8_t HAL_SPI_read_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pRxBuffer, uint32_t len)
+HAL_SPI_state_t HAL_SPI_read_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pRxBuffer, uint32_t len)
 {
 	if(pSPIhandle == NULL) { return 0xFF; }
 	if(pRxBuffer == NULL) { return 0xFF; }
@@ -320,7 +320,7 @@ uint8_t HAL_SPI_read_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pRxBuffer, uint3
  * @return       SPI peripheral Tx state when this function is called
  *
  */
-uint8_t HAL_SPI_send_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pTxBuffer, uint32_t len)
+HAL_SPI_state_t HAL_SPI_send_data_IT(SPI_handle_t *pSPIhandle, uint8_t *pTxBuffer, uint32_t len)
 {
 	if(pSPIhandle == NULL) { return 0xFF; }
 	if(pTxBuffer == NULL) { return 0xFF; }
@@ -431,7 +431,7 @@ void HAL_SPI_IRQ_handler(SPI_handle_t *pSPIhandle)
  *
  */
 __attribute((weak)) void HAL_SPI_app_evt_callback(
-		SPI_handle_t *pSPIhandle, uint8_t evt)
+		SPI_handle_t *pSPIhandle, HAL_SPI_events_t evt)
 {
     /* weak implementation - doing nothing */
 }

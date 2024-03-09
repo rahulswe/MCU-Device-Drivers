@@ -170,7 +170,7 @@ void SPI1_IRQHandler()
 
 /* SPI application event callback */
 void HAL_SPI_app_evt_callback(
-		SPI_handle_t *pSPIhandle, uint8_t evt) {
+		SPI_handle_t *pSPIhandle, HAL_SPI_events_t evt) {
 
 	(void)pSPIhandle;
 
