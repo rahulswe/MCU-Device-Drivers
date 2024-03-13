@@ -36,8 +36,31 @@
 #define _STM32F446XX_H_
 
 #include <stdint.h>
+#include <stddef.h>
 
-/* ********* Cortex-M4 processor specific registers ********** */
+/* ********* Utility Macro Definitions ********** */
+
+/* NULL pointer check macro */
+#define NULL_PTR_CHK(x) if(x == NULL) { return; }
+
+#define ENABLE          (1U)
+#define DISABLE         (0U)
+#define FLAG_SET        (1U)
+#define FLAG_NOT_SET    (0U)
+
+#define NUM_BITS_IN_A_BYTE            (8U)
+/* 4 most significant bits in NVIC priority register's PRI_X 8-bit field
+ * are implemented to define 16 possible priority levels (0 to 15) */
+#define NUM_VALID_INT_PRIO_BITS       (4U)
+/* Bit position in the interrupt priority registers's
+ * PRI_X 8-bit field, from where the valid bits starts */
+#define VALID_INT_PRIO_BIT_START_POS  ((NUM_BITS_IN_A_BYTE) - (NUM_VALID_INT_PRIO_BITS))
+/* Priority of 4 interrupts can be set per NVIC priority register */
+#define NUM_INT_PRIO_PER_REG          (4U)
+/* No. of interrupts which can be enabled per NVIC ISER register */
+#define NUM_INT_PER_NVIC_ISER_REG     (32U)
+
+/* ********* Cortex-M4 Processor Specific Registers ********** */
 
 #define NVIC_ISER0             ((volatile uint32_t*)0xE000E100U)
 #define NVIC_ICER0             ((volatile uint32_t*)0xE000E180U)
@@ -70,7 +93,13 @@
 #define GPIOG_BASE_ADDR        (AHB1_BASE_ADDR + 0x1800U)
 #define GPIOH_BASE_ADDR        (AHB1_BASE_ADDR + 0x1C00U)
 
-/* RCC Peripheral Base Addresses */
+/* SPI Peripheral Base Addresses */
+#define SPI1_BASE_ADDR         (APB2_BASE_ADDR + 0x3000U)
+#define SPI2_BASE_ADDR         (APB1_BASE_ADDR + 0x3800U)
+#define SPI3_BASE_ADDR         (APB1_BASE_ADDR + 0x3C00U)
+#define SPI4_BASE_ADDR         (APB2_BASE_ADDR + 0x3400U)
+
+/* RCC Peripheral Base Address */
 #define RCC_BASE_ADDR          (AHB1_BASE_ADDR + 0x3800U)
 
 /* EXTI Peripheral Base Address */
@@ -87,8 +116,14 @@
 #define IRQ_NO_EXTI9_5       (23U)
 #define IRQ_NO_EXTI15_10     (40U)
 
-/* ********** GPIO Register Set Structure Definition ********** */
+#define IRQ_NO_SPI1          (35U)
+#define IRQ_NO_SPI2          (36U)
+#define IRQ_NO_SPI3          (51U)
+#define IRQ_NO_SPI4          (84U)
 
+/* ********** Register Set Structure Definitions ********** */
+
+/* GPIO Register Set Structure Definition */
 typedef struct {
 	volatile uint32_t MODE;
 	volatile uint32_t OTYPE;
@@ -162,6 +197,19 @@ typedef struct {
 	volatile uint32_t CFGR;
 } SYSCFG_reg_t;
 
+/* SPI Register Set Structure Definition */
+typedef struct {
+	volatile uint32_t CR1;
+	volatile uint32_t CR2;
+	volatile uint32_t SR;
+	volatile uint32_t DR;
+	volatile uint32_t CRCPR;
+	volatile uint32_t RXCRCR;
+	volatile uint32_t TXCRCR;
+	volatile uint32_t I2SCFGR;
+	volatile uint32_t I2SPR;
+} SPI_reg_t;
+
 /* ************* Device Peripheral's Definitions ************* */
 
 /* GPIO Peripherals */
@@ -183,6 +231,12 @@ typedef struct {
 /* SYSCFG peripheral */
 #define SYSCFG                 ((SYSCFG_reg_t*)SYSCFG_BASE_ADDR)
 
+/* SPI Peripherals */
+#define SPI1                   ((SPI_reg_t*)SPI1_BASE_ADDR)
+#define SPI2                   ((SPI_reg_t*)SPI2_BASE_ADDR)
+#define SPI3                   ((SPI_reg_t*)SPI3_BASE_ADDR)
+#define SPI4                   ((SPI_reg_t*)SPI4_BASE_ADDR)
+
 /* ****** Macro Definitions for Some Peripheral's Basic Functionality ****** */
 
 /* GPIO peripheral clock enable */
@@ -197,18 +251,50 @@ typedef struct {
 /* SYSCFG peripheral clock disable */
 #define __SYSCFG_CLK_DIS()               (RCC->APB2ENR &= ~(0x1 << 0xE))
 
+/* SPI1 peripheral clock enable */
+#define __SPI1_CLK_EN()                  (RCC->APB2ENR |= (0x1 << 0xC))
+/* SPI1 peripheral clock disable */
+#define __SPI1_CLK_DIS()                 (RCC->APB2ENR &= ~(0x1 << 0xC))
+/* SPI1 peripheral register reset */
+#define __SPI1_RST()                	 { RCC->APB2RSTR |= (0x1 << 0xC) ; RCC->APB2RSTR &= ~(0x1 << 0xC); }
+
+/* SPI2 peripheral clock enable */
+#define __SPI2_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0xE))
+/* SPI2 peripheral clock disable */
+#define __SPI2_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0xE))
+/* SPI2 peripheral register reset */
+#define __SPI2_RST()                	 { RCC->APB1RSTR |= (0x1 << 0xE) ; RCC->APB1RSTR &= ~(0x1 << 0xE); }
+
+/* SPI3 peripheral clock enable */
+#define __SPI3_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0xF))
+/* SPI3 peripheral clock disable */
+#define __SPI3_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0xF))
+/* SPI3 peripheral register reset */
+#define __SPI3_RST()                	 { RCC->APB1RSTR |= (0x1 << 0xF) ; RCC->APB1RSTR &= ~(0x1 << 0xF); }
+
+/* SPI4 peripheral clock enable */
+#define __SPI4_CLK_EN()                  (RCC->APB2ENR |= (0x1 << 0xD))
+/* SPI4 peripheral clock disable */
+#define __SPI4_CLK_DIS()                 (RCC->APB2ENR &= ~(0x1 << 0xD))
+/* SPI4 peripheral register reset */
+#define __SPI4_RST()                	 { RCC->APB2RSTR |= (0x1 << 0xD) ; RCC->APB2RSTR &= ~(0x1 << 0xD); }
+
 /* EXTI line get interrupt status */
 #define __EXTI_LINE_INT_STS(pin_num)     (EXTI->PR & (1 << pin_num))
 /* EXTI line clear pending interrupt */
 #define __EXTI_LINE_CLR_INT(pin_num)     (EXTI->PR |= (1 << pin_num))
 
 /* Enable specific IRQ number in NVIC */
-#define __NVIC_ENABLE_IRQ(irq_num)       { *(NVIC_ISER0 + (irq_num/32)) |= (1 << (irq_num % 32)); }
+#define __NVIC_ENABLE_IRQ(irq_num)       { *(NVIC_ISER0 + (irq_num/NUM_INT_PER_NVIC_ISER_REG)) \
+	                                          |= (1 << (irq_num % NUM_INT_PER_NVIC_ISER_REG)); }
 /* Disable specific IRQ number in NVIC */
-#define __NVIC_DISABLE_IRQ(irq_num)      { *(NVIC_ICER0 + (irq_num/32)) |= (1 << (irq_num % 32)); }
+#define __NVIC_DISABLE_IRQ(irq_num)      { *(NVIC_ICER0 + (irq_num/NUM_INT_PER_NVIC_ISER_REG)) \
+	                                          |= (1 << (irq_num % NUM_INT_PER_NVIC_ISER_REG)); }
 /* Set priority for a specific IRQ number in NVIC */
-#define __NVIC_SET_PRIORITY(irq_num, priority_val)    { uint8_t reg_idx = IRQ_num/4, pos = (IRQ_num % 4) << 0x3; \
+#define __NVIC_SET_PRIORITY(irq_num, irq_priority)    { uint8_t reg_idx = irq_num/NUM_INT_PRIO_PER_REG;\
+	                                                    uint8_t pos = VALID_INT_PRIO_BIT_START_POS + \
+														    ((irq_num % NUM_INT_PRIO_PER_REG) << 0x3); \
 		                                                *(NVIC_IPR0 + reg_idx) &= ~(0xFF << pos); \
-		                                                *(NVIC_IPR0 + reg_idx) |= ((IRQ_prio << 0x4) << pos); \
+		                                                *(NVIC_IPR0 + reg_idx) |= ((irq_priority) << pos); \
 	                                                  }
 #endif

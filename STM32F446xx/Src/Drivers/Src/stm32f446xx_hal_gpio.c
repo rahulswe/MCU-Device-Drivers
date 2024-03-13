@@ -31,7 +31,8 @@
  ******************************************************************************
 */
 
-#include <stm32f446xx_hal_gpio.h>
+#include <stdbool.h>
+#include "stm32f446xx_hal_gpio.h"
 
 /*
  * @brief        Enable or Disable GPIO peripheral clock
@@ -42,11 +43,11 @@
  * @return       None
  *
  */
-void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en)
+static void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, bool en)
 {
 	uint8_t port = GPIO_BASE_ADDR_TO_PORT_NUM(pGPIOx);
 
-    /* check whether to enable or disable the GPIO peirpheral clock */
+    /* check whether to enable or disable the GPIO peripheral clock */
 	if(en) {
 		/* enable the GPIO peripheral clock for the specified port */
 		__GPIOx_PCLK_EN(port);
@@ -67,6 +68,9 @@ void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en)
 void HAL_GPIO_init(GPIO_handle_t *pGPIOhandle)
 {
 	uint32_t reg_val = 0;
+
+	/* enable the GPIO peripheral clock */
+	HAL_GPIO_pclk_ctrl(pGPIOhandle->pGPIOx, true);
 
 	/* check the GPIO pin mode specified in the pGPIOhandle cfg structure
 	 * is <= analog mode i.e. input mode or output mode or analog mode */
@@ -150,7 +154,7 @@ void HAL_GPIO_init(GPIO_handle_t *pGPIOhandle)
 }
 
 /*
- * @brief        Enable or Disable GPIO peripheral clock
+ * @brief        De-initialize GPIO port
  *
  * @param[in]    pGPIOx : GPIO port base address
  *
@@ -162,6 +166,9 @@ void HAL_GPIO_deinit(GPIO_reg_t *pGPIOx)
 	/* reset the GPIO port */
 	uint8_t port = GPIO_BASE_ADDR_TO_PORT_NUM(pGPIOx);
 	__GPIOx_RST(port);
+
+	/* disable the GPIO peripheral clock */
+	HAL_GPIO_pclk_ctrl(pGPIOx, false);
 }
 
 /*
@@ -169,7 +176,7 @@ void HAL_GPIO_deinit(GPIO_reg_t *pGPIOx)
  *
  * @param[in]    pGPIOx : GPIO port base address
  *
- * @return       GPIO pin state -> GPIO_PIN_SET : 1, GPIO_PIN_RESET : 0
+ * @return       GPIO pin state -> GPIO_PIN_HIGH : 1, GPIO_PIN_LOW : 0
  *
  */
 uint8_t HAL_GPIO_read_pin(GPIO_reg_t *pGPIOx, uint8_t pin_num)
@@ -197,7 +204,7 @@ uint16_t HAL_GPIO_read_port(GPIO_reg_t *pGPIOx)
  *
  * @param[in]    pGPIOx    : GPIO port base address
  * @param[in]    pin_num   : GPIO pin number
- * @param[in]    pin_state : GPIO pin state -> GPIO_PIN_SET or GPIO_PIN_RESET
+ * @param[in]    pin_state : GPIO pin state -> GPIO_PIN_HIGH or GPIO_PIN_LOW
  *
  * @return       None
  *

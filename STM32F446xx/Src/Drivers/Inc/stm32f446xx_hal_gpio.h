@@ -31,16 +31,16 @@
  ******************************************************************************
 */
 
-#ifndef _GPIO_DRV_H_
-#define _GPIO_DRV_H
+#ifndef _STM32F446XX_HAL_GPIO_H_
+#define _STM32F446XX_HAL_GPIO_H_
 
 #include "stm32f446xx.h"
 
 /* ***************** Enum Definitions ******************* */
 
 typedef enum {
-	GPIO_PIN_RESET = 0,
-	GPIO_PIN_SET
+	GPIO_PIN_LOW = 0,
+	GPIO_PIN_HIGH
 }GPIO_pin_state_t;
 
 /* ***************** Structure Definitions ******************* */
@@ -138,17 +138,6 @@ typedef struct {
 /* ***************** Function Declarations ******************* */
 
 /*
- * @brief        Enable or Disable GPIO peripheral clock
- *
- * @param[in]    pGPIOx : GPIO port base address
- * @param[in]    en     : 0 -> enable, 1 0-> disable
- *
- * @return       None
- *
- */
-void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en);
-
-/*
  * @brief        Initialize/Setup/Configure GPIO pin
  *
  * @param[in]    pGPIOhandle : Pointer to GPIO handle object
@@ -159,7 +148,7 @@ void HAL_GPIO_pclk_ctrl(GPIO_reg_t *pGPIOx, uint8_t en);
 void HAL_GPIO_init(GPIO_handle_t *pGPIOhandle);
 
 /*
- * @brief        Enable or Disable GPIO peripheral clock
+ * @brief        De-initialize GPIO port
  *
  * @param[in]    pGPIOx : GPIO port base address
  *
@@ -173,7 +162,7 @@ void HAL_GPIO_deinit(GPIO_reg_t *pGPIOx);
  *
  * @param[in]    pGPIOx : GPIO port base address
  *
- * @return       GPIO pin state -> GPIO_PIN_SET : 1, GPIO_PIN_RESET : 0
+ * @return       GPIO pin state -> GPIO_PIN_HIGH : 1, GPIO_PIN_LOW : 0
  *
  */
 GPIO_pin_state_t HAL_GPIO_read_pin(GPIO_reg_t *pGPIOx, uint8_t pin_num);
@@ -193,7 +182,7 @@ uint16_t HAL_GPIO_read_port(GPIO_reg_t *pGPIOx);
  *
  * @param[in]    pGPIOx    : GPIO port base address
  * @param[in]    pin_num   : GPIO pin number
- * @param[in]    pin_state : GPIO pin state -> GPIO_PIN_SET or GPIO_PIN_RESET
+ * @param[in]    pin_state : GPIO pin state -> GPIO_PIN_HIGH or GPIO_PIN_LOW
  *
  * @return       None
  *
