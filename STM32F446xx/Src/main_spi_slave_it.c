@@ -153,6 +153,11 @@ void HAL_SPI_app_evt_callback(
 		printf("String received = %s\n", g_rx_data);
 		break;
 	}
+	case HAL_SPI_OVR_ERR_REPORTED:
+	{
+			printf("SPI Overrun Error Reported\n");
+			break;
+	}
 	case HAL_SPI_ERR_REPORTED:
 	{
 		printf("SPI Error Reported\n");

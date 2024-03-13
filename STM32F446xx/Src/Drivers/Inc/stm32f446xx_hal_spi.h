@@ -159,6 +159,7 @@ typedef enum {
 typedef enum {
 	HAL_SPI_TX_DONE = 0,
 	HAL_SPI_RX_DONE,
+	HAL_SPI_OVR_ERR_REPORTED,
 	HAL_SPI_ERR_REPORTED,
 	HAL_SPI_NUM_EVENTS
 } HAL_SPI_events_t;

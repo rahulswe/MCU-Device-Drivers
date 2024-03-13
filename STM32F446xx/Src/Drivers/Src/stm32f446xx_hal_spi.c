@@ -38,6 +38,7 @@
 static void _HAL_SPI_rxne_evt_handler(SPI_handle_t *pSPIhandle);
 static void _HAL_SPI_txe_evt_handler(SPI_handle_t *pSPIhandle);
 static void _HAL_SPI_err_evt_handler(SPI_handle_t *pSPIhandle);
+static void _HAL_SPI_ovr_evt_handler(SPI_handle_t *pSPIhandle);
 
 /*
  * @brief        Enable or Disable SPI peripheral clock
@@ -394,6 +395,7 @@ void HAL_SPI_IRQ_handler(SPI_handle_t *pSPIhandle)
 	if((cr2_val & (0x1 << BITP_SPI_CR2_RXNEIE))
 		&& (status & (0x1 << BITP_SPI_SR_RXNE)))
 	{
+		/* call the Rx buffer not empty event handler */
 		_HAL_SPI_rxne_evt_handler(pSPIhandle);
 	}
 	/* checking if Tx buffer empty event
@@ -401,22 +403,21 @@ void HAL_SPI_IRQ_handler(SPI_handle_t *pSPIhandle)
 	if((cr2_val & (0x1 << BITP_SPI_CR2_TXEIE))
 			&& (status & (0x1 << BITP_SPI_SR_TXE)))
 	{
+		/* call the Tx buffer empty event handler */
 		_HAL_SPI_txe_evt_handler(pSPIhandle);
 	}
 	/* checking if any SPI error event
 	 * generated the interrupt */
 	if(cr2_val & (0x1 << BITP_SPI_CR2_ERRIE))
 	{
-		_HAL_SPI_err_evt_handler(pSPIhandle);
-		/*
+		/* if overrun error */
 		if(status & (0x1 << BITP_SPI_SR_OVR)) {
-
-		} else if(status & (0x1 << BITP_SPI_SR_CRCERR)) {
-
-		} else if(status & (0x1 << BITP_SPI_SR_OVR)) {
-
+			 /* call the overrun event handler */
+			_HAL_SPI_ovr_evt_handler(pSPIhandle);
+		} else { // CRC error, frame error, etc...
+			/* call the error event handler */
+			_HAL_SPI_err_evt_handler(pSPIhandle);
 		}
-		*/
 	}
 }
 
@@ -517,7 +518,7 @@ static void _HAL_SPI_txe_evt_handler(SPI_handle_t *pSPIhandle) {
 }
 
 /*
- * @brief        SPI ERR interrupt event handler
+ * @brief        SPI error interrupt event handler
  *               to report the error
  *
  * @param[in]    pSPIhandle: Pointer to SPI handle object
@@ -531,4 +532,33 @@ static void _HAL_SPI_err_evt_handler(SPI_handle_t *pSPIhandle) {
 	/* notify the application that SPI peripheral
 	 * generated an interrupt reporting some error */
 	HAL_SPI_app_evt_callback(pSPIhandle, HAL_SPI_ERR_REPORTED);
+}
+
+/*
+ * @brief        SPI overrun error interrupt event handler
+ *               to report the error
+ *
+ * @param[in]    pSPIhandle: Pointer to SPI handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_SPI_ovr_evt_handler(SPI_handle_t *pSPIhandle) {
+	NULL_PTR_CHK(pSPIhandle);
+
+	uint8_t temp = 0;
+	/* check if application is not busy in Tx,
+	 * then only read the data and status register
+	 * to clear the overrun bit */
+	if(pSPIhandle->txState == HAL_SPI_READY) {
+		temp = pSPIhandle->pSPIx->DR;
+		temp = pSPIhandle->pSPIx->SR;
+	}
+
+	/* to remove gcc compiler warnings */
+	(void)temp;
+
+	/* notify the application that SPI peripheral
+	 * generated an interrupt reporting some error */
+	HAL_SPI_app_evt_callback(pSPIhandle, HAL_SPI_OVR_ERR_REPORTED);
 }
