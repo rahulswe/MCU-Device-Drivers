@@ -46,7 +46,7 @@ void sw_delay() {
 }
 
 /* flag to monitor button press status */
-uint8_t g_button_pressed = false;
+uint8_t gb_button_pressed = false;
 
 /* SPI1 handle object */
 SPI_handle_t gSPI1Handle;
@@ -130,10 +130,10 @@ int main(void)
 
 	while(1) {
 		/* wait until user button is pressed */
-		while(!g_button_pressed);
+		while(!gb_button_pressed);
 
 		/* reset the flag for next interrupt */
-		g_button_pressed = false;
+		gb_button_pressed = false;
 
 		/* sending a pattern data over MOSI line */
 		char data[] = "Hello SPI";
@@ -162,7 +162,7 @@ void EXTI15_10_IRQHandler(void)
 	/* set the button pressed flag with some
 	 * delay to handle button de-bouncing */
 	sw_delay();
-	g_button_pressed = true;
+	gb_button_pressed = true;
 }
 
 /* IRQ Handler to service the interrupts

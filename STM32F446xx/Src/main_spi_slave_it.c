@@ -47,11 +47,8 @@ void sw_delay() {
 /* SPI1 handle object */
 SPI_handle_t gSPI1Handle;
 
-/* Buffer to store the received data over SPI */
-char gRxData[10];
-
-/* flag to track if data has been received over SPI */
-uint8_t gbDataReceived = 0;
+/* buffer to store the received data over SPI */
+char g_rx_data[10];
 
 /* keeping some valid same interrupt
  * prio value for all the interrupts
@@ -115,17 +112,13 @@ int main(void)
 	/* enable SPI interrupt */
 	HAL_SPI_IRQ_config(IRQ_NO_SPI1, DEFAULT_INT_PRIO, ENABLE);
 
-	//gbDataReceived = 0;
-
 	while(1) {
 		/* enable the SPI peripheral */
 		HAL_SPI_ctrl(SPI1, ENABLE);
 
 		/* read the data over MOSI line in non-
 		 * blocking mode as sent by the master */
-		while(HAL_SPI_read_data_IT(&gSPI1Handle, (uint8_t*)gRxData, sizeof(gRxData)) != HAL_SPI_READY);
-
-		//while(!gbDataReceived);
+		while(HAL_SPI_read_data_IT(&gSPI1Handle, (uint8_t*)g_rx_data, sizeof(g_rx_data)) != HAL_SPI_READY);
 
 		/* wait if SPI peripheral is busy */
 		while(HAL_SPI_flag_status(SPI1, SPI_SR_BSY_FLAG));
@@ -157,8 +150,7 @@ void HAL_SPI_app_evt_callback(
 	case HAL_SPI_RX_DONE:
 	{
 		printf("SPI Rx Done\n");
-		printf("String received = %s\n", gRxData);
-		//gbDataReceived = 1;
+		printf("String received = %s\n", g_rx_data);
 		break;
 	}
 	case HAL_SPI_ERR_REPORTED:

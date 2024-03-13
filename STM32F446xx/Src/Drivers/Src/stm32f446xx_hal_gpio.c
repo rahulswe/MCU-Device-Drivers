@@ -176,7 +176,7 @@ void HAL_GPIO_deinit(GPIO_reg_t *pGPIOx)
  *
  * @param[in]    pGPIOx : GPIO port base address
  *
- * @return       GPIO pin state -> GPIO_PIN_SET : 1, GPIO_PIN_RESET : 0
+ * @return       GPIO pin state -> GPIO_PIN_HIGH : 1, GPIO_PIN_LOW : 0
  *
  */
 uint8_t HAL_GPIO_read_pin(GPIO_reg_t *pGPIOx, uint8_t pin_num)
@@ -204,7 +204,7 @@ uint16_t HAL_GPIO_read_port(GPIO_reg_t *pGPIOx)
  *
  * @param[in]    pGPIOx    : GPIO port base address
  * @param[in]    pin_num   : GPIO pin number
- * @param[in]    pin_state : GPIO pin state -> GPIO_PIN_SET or GPIO_PIN_RESET
+ * @param[in]    pin_state : GPIO pin state -> GPIO_PIN_HIGH or GPIO_PIN_LOW
  *
  * @return       None
  *
