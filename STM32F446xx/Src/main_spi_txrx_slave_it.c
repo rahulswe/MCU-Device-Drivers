@@ -81,10 +81,10 @@ int main(void)
 	 * master to send a data ready interrupt to it */
 	GPIO_handle_t GPIO_handle = {
 			.pGPIOx = GPIOA,
-			.cfg.pin_number = GPIO_PIN_9, //pin connected to the master
+			.cfg.pin_number = GPIO_PIN_1, //pin connected to the master
 			.cfg.pin_mode = GPIO_PIN_MODE_OUT,
-			.cfg.pin_otype = 0x00, //reset value
-			.cfg.pin_ospeed = 0x00, //reset value
+			.cfg.pin_otype = GPIO_PIN_OTYPE_PUSH_PULL,
+			.cfg.pin_ospeed = GPIO_PIN_OSPEED_FAST,
 			.cfg.pupd_ctrl = GPIO_PIN_PULL_UP,
 			.cfg.alt_func = 0x00 //reset value
 	};
@@ -92,7 +92,7 @@ int main(void)
 	/* Initialize the GPIO pin for sending slave
 	 * data ready interrupt to the master */
 	HAL_GPIO_init(&GPIO_handle);
-	HAL_GPIO_write_pin(GPIOA, GPIO_PIN_9, GPIO_PIN_HIGH);
+	HAL_GPIO_write_pin(GPIOA, GPIO_PIN_1, GPIO_PIN_HIGH); // why is this needed investigate ??
 
 	/* configure SPI GPIOs for STM32F446RE Nucleo Board */
 
