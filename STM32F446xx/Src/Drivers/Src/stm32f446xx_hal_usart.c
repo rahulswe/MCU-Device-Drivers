@@ -34,6 +34,13 @@
 #include <stdbool.h>
 #include "stm32f446xx_hal_usart.h"
 
+/* USART interrupt events handler declaration */
+static void _HAL_USART_rxne_evt_handler(USART_handle_t *pUSARThandle);
+static void _HAL_USART_txe_evt_handler(USART_handle_t *pUSARThandle);
+static void _HAL_USART_err_evt_handler(USART_handle_t *pUSARThandle);
+static void _HAL_USART_ovr_evt_handler(USART_handle_t *pUSARThandle);
+static void _HAL_USART_tc_evt_handler(USART_handle_t *pUSARThandle);
+
 /*
  * @brief        Enable or Disable USART peripheral clock
  *
@@ -64,6 +71,57 @@ static void _HAL_USART_pclk_ctrl(USART_reg_t *pUSARTx, bool en)
 		else if(pUSARTx == UART5) { __UART5_CLK_DIS(); }
 		else if(pUSARTx == USART6) { __USART6_CLK_DIS(); }
 	}
+}
+
+uint16_t AHB_prescalar[] = {2, 4, 8, 16, 32, 64, 128, 256, 512};
+uint8_t APB1_prescalar[] = {2, 4, 8, 16};
+
+static uint32_t RCC_getPCLK1freq() {
+	uint32_t pclk1_freq = 0;
+
+	/* determine the clock source */
+	uint32_t reg_val = RCC->CFGR;
+
+	uint8_t sys_clk_sws = (reg_val >> 0x2) & 0x3;
+	if(sys_clk_sws == 0x00) {
+		pclk1_freq = HSI_OSC_FREQ;
+	} else if (sys_clk_sws == 0x01) {
+		pclk1_freq = HSE_OSC_FREQ;
+	} else {
+		/* TODO: add support for PLL */
+		pclk1_freq = HSI_OSC_FREQ;
+	}
+
+	/* get the AHB1 prescalar value */
+	uint8_t temp = (reg_val >> 0x4) & 0xF;
+	uint8_t ahb_prescalar = (temp < 8) ? 1:AHB_prescalar[temp - 8];
+
+	/* get the APB1 prescalar value */
+	temp = (reg_val >> 0xA) & 0x7;
+	uint8_t apb1_prescalar = (temp < 4) ? 1:APB1_prescalar[temp - 4];
+
+	/* obtain the APB1 clock frequency after
+	 * dividing AHB and APB1 prescalar value */
+	pclk1_freq /= ahb_prescalar;
+	pclk1_freq /= apb1_prescalar;
+
+	return pclk1_freq;
+}
+
+static void __HAL_USART_set_baud_rate(USART_reg_t *pUSARTx, uint32_t baud_rate)
+{
+	uint32_t fpclk = RCC_getPCLK1freq();
+	uint32_t over8 = 1;//oversampling by 8
+	float usart_div = (float)fpclk/(8*(2 - over8)*baud_rate);
+
+	uint32_t mantissa = (uint32_t)usart_div;
+	uint32_t fraction = (uint32_t)(usart_div*100) - (mantissa*100);
+	fraction = ((fraction*8) + 50)/100;//*8 for over8 = 1
+
+	fraction &= 0x7; //for over8 = 1
+
+	uint32_t reg_val = (mantissa << 0x4) | fraction;
+	pUSARTx->BRR = reg_val;
 }
 
 /*
@@ -109,7 +167,70 @@ void HAL_USART_ctrl(USART_reg_t *pUSARTx, uint8_t en)
  */
 void HAL_USART_init(USART_handle_t *pUSARThandle)
 {
+	NULL_PTR_CHK(pUSARThandle);
 
+	uint32_t reg_val = 0;
+
+	/* enable the USART peripheral clock */
+	_HAL_USART_pclk_ctrl(pUSARThandle->pUSARTx, true);
+
+	/* set communication mode */
+	if(pUSARThandle->cfg.mode == USART_TX_MODE) {
+		reg_val |= 0x1 << BITP_USART_CR1_TE;
+	} else if(pUSARThandle->cfg.mode == USART_RX_MODE) {
+		reg_val |= 0x1 << BITP_USART_CR1_RE;
+	} else { // USART_TXRX_MODE
+		reg_val |= 0x1 << BITP_USART_CR1_TE;
+		reg_val |= 0x1 << BITP_USART_CR1_RE;
+	}
+
+	/* set word length */
+	reg_val |= pUSARThandle->cfg.word_len << BITP_USART_CR1_M;
+
+	/* configure parity control  */
+	if(pUSARThandle->cfg.parity_ctrl != USART_PARITY_DISABLE) {
+		/* enable parity control */
+		reg_val |= 0x1 << BITP_USART_CR1_PCE;
+		/* select even or odd parity */
+		reg_val |= pUSARThandle->cfg.parity_ctrl << BITP_USART_CR1_PS;
+	}
+
+	//OVER8
+	reg_val |= 0x1 << 15;
+
+	/* set the USART CR1 register with the
+	* value as per specified configuration */
+	pUSARThandle->pUSARTx->CR1 = reg_val;
+
+	reg_val = 0; //todo: use default value instead of 0
+	/* set stop bit length */
+	reg_val |= pUSARThandle->cfg.stop_bit_len << BITP_USART_CR2_STOP;
+
+	/* set the USART CR2 register with the
+	* value as per specified configuration */
+	pUSARThandle->pUSARTx->CR2 = reg_val;
+
+	/* configure h/w flow control  */
+	if(pUSARThandle->cfg.hw_flow_ctrl != USART_HW_FLOW_CTRL_DISABLE) {
+		reg_val = 0; //todo: use default value instead of 0
+		if(pUSARThandle->cfg.hw_flow_ctrl == USART_HW_FLOW_CTRL_EN_RTS) {
+			reg_val |= 0x1 << BITP_USART_CR3_RTSE;
+		} else if(pUSARThandle->cfg.hw_flow_ctrl == USART_HW_FLOW_CTRL_EN_CTS) {
+			reg_val |= 0x1 << BITP_USART_CR3_CTSE;
+		} else { //USART_HW_FLOW_CTRL_EN_RTS_CTS
+			reg_val |= 0x1 << BITP_USART_CR3_RTSE;
+			reg_val |= 0x1 << BITP_USART_CR3_CTSE;
+		}
+		/* set the USART CR2 register with the
+		* value as per specified configuration */
+		pUSARThandle->pUSARTx->CR3 = reg_val;
+	}
+
+	/* set baud rate */
+	__HAL_USART_set_baud_rate(pUSARThandle->pUSARTx, pUSARThandle->cfg.baud_rate);
+
+	/* enable the USART peripheral */
+	//done through a separate function
 }
 
 /*
@@ -139,31 +260,109 @@ void HAL_USART_deinit(USART_reg_t *pUSARTx)
 /*
  * @brief        Read data over USART peripheral (blocking mode)
  *
- * @param[in]    pUSARTx   : USART peripheral base address
+ * @param[in]    pUSARThandle : Pointer to USART handle object
  * @param[in]    pRxBuffer : Pointer to the buffer storing received data
  * @param[in]    len       : Size of data to be received (in bytes)
  *
  * @return       None
  *
  */
-void HAL_USART_read_data(USART_reg_t *pUSARTx, uint8_t *pRxBuffer, uint32_t len)
+void HAL_USART_read_data(USART_handle_t *pUSARThandle, uint8_t *pRxBuffer, uint32_t len)
 {
+	/* if len = 0, return */
+	if(len == 0) {
+		return;
+	}
 
+	for(uint32_t idx = 0; idx < len; idx++) {
+		/* wait till RXNE is not set */
+		while(!HAL_USART_flag_status(pUSARThandle->pUSARTx, USART_SR_RXNE_FLAG));
+
+		/* if data frame word length == 9 bits */
+		if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_M)) {
+			/* if parity control enable, last bit is parity bit in the frame */
+			if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_PCE)) {
+				/* first 8 bits are data bits and last bit (msb) is parity bit */
+				*pRxBuffer = pUSARThandle->pUSARTx->DR & 0xFF;
+				pRxBuffer++;
+			} else {/* if parity control disabled, no parity bit in the frame */
+				/* all of the 9 bits are data bits */
+				*((uint16_t *)pRxBuffer) = pUSARThandle->pUSARTx->DR & 0x01FF;
+				//((uint16_t *)pRxBuffer)++; //increment pRxBuffer by 2 bytes
+				pRxBuffer++;
+				pRxBuffer++;
+			}
+		} else {/* if data frame word length == 8 bits */
+			/* if parity control enable, last bit is parity bit in the frame */
+			if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_PCE)) {
+				/* first 7 bits are data bits and last bit (msb) is parity bit */
+				*pRxBuffer = pUSARThandle->pUSARTx->DR & 0x7F;
+				pRxBuffer++;
+			} else {/* if parity control disabled, no parity bit in the frame */
+				/* all of the 8 bits are data bits */
+				*pRxBuffer = pUSARThandle->pUSARTx->DR & 0xFF;
+				pRxBuffer++;
+			}
+		}
+	}
 }
 
 /*
  * @brief        Send data over USART peripheral (blocking mode)
  *
- * @param[in]    pUSARTx   : USART peripheral base address
+ * @param[in]    pUSARThandle : Pointer to USART handle object
  * @param[in]    pTxBuffer : Pointer to the buffer sending data to be sent
  * @param[in]    len       : Size of data to be sent (in bytes)
  *
  * @return       None
  *
  */
-void HAL_USART_send_data(USART_reg_t *pUSARTx, uint8_t *pTxBuffer, uint32_t len)
+void HAL_USART_send_data(USART_handle_t *pUSARThandle, uint8_t *pTxBuffer, uint32_t len)
 {
+	/* if len = 0, return */
+	if(len == 0) {
+		return;
+	}
 
+	for(uint32_t idx = 0; idx < len; idx++) {
+		/* wait till TXE is not set */
+		while(!HAL_USART_flag_status(pUSARThandle->pUSARTx, USART_SR_TXE_FLAG));
+
+		/* if data frame word length == 9 bits */
+		if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_M)) {
+			/* if parity control enable, last bit is parity bit in the frame */
+			if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_PCE)) {
+				/* first 8 bits are data bits and last bit (msb) is parity bit */
+				pUSARThandle->pUSARTx->DR = *pTxBuffer;
+				pTxBuffer++;
+			} else {/* if parity control disabled, no parity bit in the frame */
+				/* all of the 9 bits are data bits */
+				pUSARThandle->pUSARTx->DR = *((uint16_t *)pTxBuffer) & 0x1FF;
+				pTxBuffer++;
+				pTxBuffer++;
+			}
+		} else { /* if data frame word length == 8 bits */
+#if 0
+			/* if parity control enable, last bit is parity bit in the frame */
+			if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_PCE)) {
+				/* first 7 bits are data bits and last bit (msb) is parity bit */
+				pUSARThandle->pUSARTx->DR = *pTxBuffer & 0x7F;
+				pTxBuffer++;
+			} else {/* if parity control disabled, no parity bit in the frame */
+				/* all of the 8 bits are data bits */
+				pUSARThandle->pUSARTx->DR = *pTxBuffer;
+				pTxBuffer++;
+			}
+#else
+			/* if parity control enabled, msb will be
+			 * updated with parity bit by the HW */
+			pUSARThandle->pUSARTx->DR = *pTxBuffer;
+			pTxBuffer++;
+#endif
+		}
+	}
+	/* wait till data transmission is not completed */
+	while(!HAL_USART_flag_status(pUSARThandle->pUSARTx, USART_SR_TC_FLAG));
 }
 
 /*
@@ -176,9 +375,35 @@ void HAL_USART_send_data(USART_reg_t *pUSARTx, uint8_t *pTxBuffer, uint32_t len)
  * @return       USART peripheral Rx state when this function is called
  *
  */
-HAL_USART_state_t HAL_USART_read_data_IT(USART_handle_t *pUSARThandle, uint8_t *pRxBuffer, uint32_t len)
+HAL_USART_state_t HAL_USART_read_data_IT(USART_handle_t *pUSARThandle,
+		uint8_t *pRxBuffer, uint32_t len)
 {
+	if(pUSARThandle == NULL) { return 0xFF; }
+	if(pRxBuffer == NULL) { return 0xFF; }
 
+	/* if there is nothing to be received then return */
+	if(len == 0) {
+		return 0xFF;
+	}
+
+	uint8_t rx_state = pUSARThandle->rxState;
+
+	if(rx_state == HAL_USART_READY)
+	{
+		/* store address of the buffer where
+		* the data to be received is stored
+		* and the size of data */
+		pUSARThandle->pRxBuff = pRxBuffer;
+		pUSARThandle->rxLen = len;
+
+		/* set the USART Rx busy status */
+		pUSARThandle->rxState = HAL_USART_BUSY_IN_RX;
+
+		/* enable RXNE interrupt */
+		pUSARThandle->pUSARTx->CR1 |= 0x1 << BITP_USART_CR1_RXNEIE;
+	}
+
+	return rx_state;
 }
 
 /*
@@ -193,7 +418,35 @@ HAL_USART_state_t HAL_USART_read_data_IT(USART_handle_t *pUSARThandle, uint8_t *
  */
 HAL_USART_state_t HAL_USART_send_data_IT(USART_handle_t *pUSARThandle, uint8_t *pTxBuffer, uint32_t len)
 {
+	if(pUSARThandle == NULL) { return 0xFF; }
+	if(pTxBuffer == NULL) { return 0xFF; }
 
+	/* if there is nothing to be sent then return */
+	if(len == 0) {
+		return 0xFF;
+	}
+
+	uint8_t tx_state = pUSARThandle->txState;
+
+	if(tx_state == HAL_USART_READY)
+	{
+		/* store address of the buffer where
+		* the data to be sent is stored
+		* and the size of data */
+		pUSARThandle->pTxBuff = pTxBuffer;
+		pUSARThandle->txLen = len;
+
+		/* set the USART Tx busy status */
+		pUSARThandle->txState = HAL_USART_BUSY_IN_TX;
+
+		/* enable TXE interrupt */
+		pUSARThandle->pUSARTx->CR1 |= 0x1 << BITP_USART_CR1_TXEIE;
+
+		/* enable TC interrupt */
+		pUSARThandle->pUSARTx->CR1 |= 0x1 << BITP_USART_CR1_TCIE;
+	}
+
+	return tx_state;
 }
 
 /*
@@ -229,7 +482,62 @@ void HAL_USART_IRQ_config(uint32_t IRQ_num, uint32_t IRQ_prio, uint8_t en)
  */
 void HAL_USART_IRQ_handler(USART_handle_t *pUSARThandle)
 {
+	NULL_PTR_CHK(pUSARThandle);
 
+	uint8_t status = pUSARThandle->pUSARTx->SR;
+	uint8_t cr1_val = pUSARThandle->pUSARTx->CR1;
+	uint8_t cr3_val = pUSARThandle->pUSARTx->CR3;
+
+	/* check which USART event generated the interrupt
+	 * and call the respective handler to service it */
+
+	/* checking if Rx buffer not empty
+	 * event generated the interrupt */
+	if((cr1_val & (0x1 << BITP_USART_CR1_RXNEIE))
+		&& (status & USART_SR_RXNE_FLAG))
+	{
+		/* call the Rx buffer not empty event handler */
+		_HAL_USART_rxne_evt_handler(pUSARThandle);
+	}
+	/* checking if Tx buffer empty event
+	* generated the interrupt */
+	if((cr1_val & (0x1 << BITP_USART_CR1_TXEIE))
+		&& (status & USART_SR_TXE_FLAG))
+	{
+		/* call the Tx buffer empty event handler */
+		_HAL_USART_txe_evt_handler(pUSARThandle);
+	}
+	/* checking if transmission completed (TC)
+	 * event generated the interrupt */
+	if((cr1_val & (0x1 << BITP_USART_CR1_TCIE))
+		&& (status & USART_SR_TC_FLAG))
+	{
+		/* call the transmission completed event handler */
+		_HAL_USART_tc_evt_handler(pUSARThandle);
+	}
+
+	/* checking if parity error event
+	* generated the interrupt */
+	if((cr1_val & (0x1 << BITP_USART_CR1_PEIE))
+			&& (status & USART_SR_PE_FLAG))
+	{
+		/* call the error event handler */
+		_HAL_USART_err_evt_handler(pUSARThandle);
+	}
+
+	/* checking if any USART error event
+	 * generated the interrupt */
+	if(cr3_val & (0x1 << BITP_USART_CR3_EIE))
+	{
+		/* if overrun error */
+		if(status & USART_SR_ORE_FLAG) {
+			 /* call the overrun error event handler */
+			_HAL_USART_ovr_evt_handler(pUSARThandle);
+		} else { // Noise flag detected or frame error
+			/* call the error event handler */
+			_HAL_USART_err_evt_handler(pUSARThandle);
+		}
+	}
 }
 
 /*
@@ -242,8 +550,200 @@ void HAL_USART_IRQ_handler(USART_handle_t *pUSARThandle)
  * @return       None
  *
  */
-void HAL_USART_app_evt_callback(
+__attribute((weak)) void HAL_USART_app_evt_callback(
 		USART_handle_t *pUSARThandle, HAL_USART_events_t evt)
 {
+    /* weak implementation - doing nothing */
+}
 
+/*
+ * @brief        USART RXNE interrupt event handler
+ *               to receive a data frame
+ *
+ * @param[in]    pUSARThandle : Pointer to USART handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_USART_rxne_evt_handler(USART_handle_t *pUSARThandle) {
+	NULL_PTR_CHK(pUSARThandle);
+
+	if(pUSARThandle->rxLen == 0) { return; }
+
+	/* receive a data frame */
+	/* if data frame word length == 9 bits */
+	if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_M)) {
+		/* if parity control enable, last bit is parity bit in the frame */
+		if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_PCE)) {
+			/* first 8 bits are data bits and last bit (msb) is parity bit */
+			*pUSARThandle->pRxBuff = pUSARThandle->pUSARTx->DR & 0xFF;
+			pUSARThandle->pRxBuff++;
+			/* decrement num received bytes by 1 */
+			pUSARThandle->rxLen--;
+		} else {/* if parity control disabled, no parity bit in the frame */
+			/* all of the 9 bits are data bits */
+			*((uint16_t *)pUSARThandle->pRxBuff) = pUSARThandle->pUSARTx->DR & 0x01FF;
+			pUSARThandle->pRxBuff++;
+			pUSARThandle->pRxBuff++;
+			/* decrement num received bytes by 2 */
+			pUSARThandle->rxLen -= 2;
+		}
+	} else {/* if data frame word length == 8 bits */
+		/* if parity control enable, last bit is parity bit in the frame */
+		if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_PCE)) {
+			/* first 7 bits are data bits and last bit (msb) is parity bit */
+			*pUSARThandle->pRxBuff = pUSARThandle->pUSARTx->DR & 0x7F;
+			pUSARThandle->pRxBuff++;
+		} else {/* if parity control disabled, no parity bit in the frame */
+			/* all of the 8 bits are data bits */
+			*pUSARThandle->pRxBuff = pUSARThandle->pUSARTx->DR & 0xFF;
+			pUSARThandle->pRxBuff++;
+		}
+		/* decrement num received bytes by 1 */
+		pUSARThandle->rxLen--;
+	}
+
+	/* check if all the bytes have been received */
+	if(pUSARThandle->rxLen == 0) {
+		/* reset the USART S/W Rx buffer ptr and state */
+		pUSARThandle->pRxBuff = NULL;
+		pUSARThandle->rxState  = HAL_USART_READY;
+		/* disable RXNE interrupt as data rx is completed */
+		pUSARThandle->pUSARTx->CR1 &= ~(0x1 << BITP_USART_CR1_RXNEIE);
+		/* notify the application that USART Rx is completed */
+		HAL_USART_app_evt_callback(pUSARThandle, HAL_USART_RX_DONE);
+	}
+}
+
+/*
+ * @brief        USART TXE interrupt event handler
+ *               to send a data frame
+ *
+ * @param[in]    pUSARThandle : Pointer to USART handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_USART_txe_evt_handler(USART_handle_t *pUSARThandle) {
+	NULL_PTR_CHK(pUSARThandle);
+
+	if(pUSARThandle->txLen == 0) { return; }
+
+	/* if data frame word length == 9 bits */
+	if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_M)) {
+		/* if parity control enable, last bit is parity bit in the frame */
+		if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_PCE)) {
+			/* first 8 bits are data bits and last bit (msb) is parity bit */
+			pUSARThandle->pUSARTx->DR = *pUSARThandle->pTxBuff;
+			pUSARThandle->pTxBuff++;
+		} else {/* if parity control disabled, no parity bit in the frame */
+			/* all of the 9 bits are data bits */
+			pUSARThandle->pUSARTx->DR = *((uint16_t *)pUSARThandle->pTxBuff) & 0x1FF;
+			pUSARThandle->pTxBuff++;
+			pUSARThandle->pTxBuff++;
+		}
+	} else { /* if data frame word length == 8 bits */
+#if 0
+		/* if parity control enable, last bit is parity bit in the frame */
+		if(pUSARThandle->pUSARTx->CR1 & (0x1 << BITP_USART_CR1_PCE)) {
+			/* first 7 bits are data bits and last bit (msb) is parity bit */
+			pUSARThandle->pUSARTx->DR = *pUSARThandle->pTxBuff & 0x7F;
+			pUSARThandle->pTxBuff++;
+		} else {/* if parity control disabled, no parity bit in the frame */
+			/* all of the 8 bits are data bits */
+			pUSARThandle->pUSARTx->DR = *pUSARThandle->pTxBuff;
+			pUSARThandle->pTxBuff++;
+		}
+#else
+		/* if parity control enable, msb will be
+		 * updated with parity bit by the HW */
+		pUSARThandle->pUSARTx->DR = *pUSARThandle->pTxBuff;
+		pUSARThandle->pTxBuff++;
+#endif
+	}
+
+	/* decrement num transmitted bytes by 1 */
+	pUSARThandle->txLen--;
+
+	/* check if all the bytes have been sent */
+	if(pUSARThandle->txLen == 0) {
+		/* disable TXE interrupt as required data has been sent */
+		pUSARThandle->pUSARTx->CR1 &= ~(0x1 << BITP_USART_CR1_TXEIE);
+		/* application will be notified when TC flag is set and
+		 * interrupt triggered indicating data tx is completed */
+	}
+}
+
+/*
+ * @brief        USART transmission completed (TC) interrupt event
+ *               handler to send a data frame
+ *
+ * @param[in]    pUSARThandle : Pointer to USART handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_USART_tc_evt_handler(USART_handle_t *pUSARThandle) {
+	NULL_PTR_CHK(pUSARThandle);
+
+	/* TC flag is sent for each frame transmitted successfully */
+
+	/* check if all the bytes have been sent */
+	if(pUSARThandle->txLen == 0) {
+		/* reset the USART S/W Tx buffer ptr and state */
+		pUSARThandle->pTxBuff = NULL;
+		pUSARThandle->txState  = HAL_USART_READY;
+		/* disable TC interrupt as data tx is completed */
+		pUSARThandle->pUSARTx->CR1 &= ~(0x1 << BITP_USART_CR1_TCIE);
+		/* clear the TC flag */
+		pUSARThandle->pUSARTx->SR &= ~(0x1 << BITP_USART_SR_TC);
+		/* notify the application that USART Tx is completed */
+		HAL_USART_app_evt_callback(pUSARThandle, HAL_USART_TX_DONE);
+	}
+}
+
+/*
+ * @brief        USART error interrupt event handler
+ *               to report the error
+ *
+ * @param[in]    pUSARThandle : Pointer to USART handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_USART_err_evt_handler(USART_handle_t *pUSARThandle) {
+	NULL_PTR_CHK(pUSARThandle);
+
+	/* notify the application that USART peripheral
+	 * generated an interrupt reporting some error */
+	HAL_USART_app_evt_callback(pUSARThandle, HAL_USART_ERR_REPORTED);
+}
+
+/*
+ * @brief        USART overrun error interrupt event handler
+ *               to report the error
+ *
+ * @param[in]    pUSARThandle : Pointer to USART handle object
+ *
+ * @return       None
+ *
+ */
+static void _HAL_USART_ovr_evt_handler(USART_handle_t *pUSARThandle) {
+	NULL_PTR_CHK(pUSARThandle);
+
+	uint8_t temp = 0;
+	/* check if application is not busy in Tx,
+	 * then only read the data and status register
+	 * to clear the overrun bit */
+	if(pUSARThandle->txState == HAL_USART_READY) {
+		temp = pUSARThandle->pUSARTx->SR;
+		temp = pUSARThandle->pUSARTx->DR;
+	}
+
+	/* to remove gcc compiler warnings */
+	(void)temp;
+
+	/* notify the application that USART peripheral
+	 * generated an interrupt reporting some error */
+	HAL_USART_app_evt_callback(pUSARThandle, HAL_USART_OVR_ERR_REPORTED);
 }

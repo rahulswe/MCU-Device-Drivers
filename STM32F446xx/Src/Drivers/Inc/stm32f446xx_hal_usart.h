@@ -44,14 +44,20 @@ typedef struct {
 	uint8_t word_len; // word length
 	uint8_t parity_ctrl; // parity control
 	uint8_t stop_bit_len; // no. of stop bits
-	uint32_t baud_rate; // baud rate
 	uint8_t hw_flow_ctrl; // HW flow control
+	uint32_t baud_rate; // baud rate
 }USART_cfg_t;
 
 /* USART handle structure */
 typedef struct {
 	USART_reg_t *pUSARTx;
 	USART_cfg_t cfg;
+	uint8_t *pTxBuff;
+	uint8_t *pRxBuff;
+	uint8_t txState;
+	uint8_t rxState;
+	uint32_t rxLen;
+	uint32_t txLen;
 }USART_handle_t;
 
 /* ******************* Macro Definitions ********************* */
@@ -62,9 +68,9 @@ typedef struct {
 #define USART_TXRX_MODE                (0x02U)
 
 /* USART parity control */
-#define USART_PARITY_DISABLE           (0x00U)
+#define USART_PARITY_EN_EVEN           (0x00U)
 #define USART_PARITY_EN_ODD            (0x01U)
-#define USART_PARITY_EN_EVEN           (0x02U)
+#define USART_PARITY_DISABLE           (0x02U)
 
 /* USART hardware flow control */
 #define USART_HW_FLOW_CTRL_DISABLE     (0x00U)
@@ -92,10 +98,10 @@ typedef struct {
 #define USART_WORD_LEN_9BITS           (0x01U)
 
 /* USART stop bit length */
-#define USART_STOP_BIT_LEN_0_5         (0x00U)
-#define USART_STOP_BIT_LEN_1           (0x01U)
-#define USART_STOP_BIT_LEN_1_5         (0x02U)
-#define USART_STOP_BIT_LEN_2           (0x03U)
+#define USART_STOP_BIT_LEN_1           (0x00U)
+#define USART_STOP_BIT_LEN_0_5         (0x01U)
+#define USART_STOP_BIT_LEN_2           (0x02U)
+#define USART_STOP_BIT_LEN_1_5         (0x03U)
 
 /* USART status register bit positions */
 #define BITP_USART_SR_PE               (0U)
@@ -148,6 +154,20 @@ typedef struct {
 #define BITP_USART_CR2_CLKEN           (11U)
 #define BITP_USART_CR2_STOP            (12U)
 #define BITP_USART_CR2_LINEN           (14U)
+
+/* USART CR3 register bit positions */
+#define BITP_USART_CR3_EIE             (0U)
+#define BITP_USART_CR3_IREN            (1U)
+#define BITP_USART_CR3_IRLP            (2U)
+#define BITP_USART_CR3_HDSEL           (3U)
+#define BITP_USART_CR3_NACK            (4U)
+#define BITP_USART_CR3_SCEN            (5U)
+#define BITP_USART_CR3_DMAR            (6U)
+#define BITP_USART_CR3_DMAT            (7U)
+#define BITP_USART_CR3_RTSE            (8U)
+#define BITP_USART_CR3_CTSE            (9U)
+#define BITP_USART_CR3_CTSIE           (10U)
+#define BITP_USART_CR3_ONEBIT          (11U)
 
 /* ******************* Enum Definitions ********************* */
 
@@ -213,26 +233,26 @@ void HAL_USART_deinit(USART_reg_t *pUSARTx);
 /*
  * @brief        Read data over USART peripheral (blocking mode)
  *
- * @param[in]    pUSARTx   : USART peripheral base address
+ * @param[in]    pUSARThandle : Pointer to USART handle object
  * @param[in]    pRxBuffer : Pointer to the buffer storing received data
  * @param[in]    len       : Size of data to be received (in bytes)
  *
  * @return       None
  *
  */
-void HAL_USART_read_data(USART_reg_t *pUSARTx, uint8_t *pRxBuffer, uint32_t len);
+void HAL_USART_read_data(USART_handle_t *pUSARThandle, uint8_t *pRxBuffer, uint32_t len);
 
 /*
  * @brief        Send data over USART peripheral (blocking mode)
  *
- * @param[in]    pUSARTx   : USART peripheral base address
+ * @param[in]    pUSARThandle : Pointer to USART handle object
  * @param[in]    pTxBuffer : Pointer to the buffer sending data to be sent
  * @param[in]    len       : Size of data to be sent (in bytes)
  *
  * @return       None
  *
  */
-void HAL_USART_send_data(USART_reg_t *pUSARTx, uint8_t *pTxBuffer, uint32_t len);
+void HAL_USART_send_data(USART_handle_t *pUSARThandle, uint8_t *pTxBuffer, uint32_t len);
 
 /*
  * @brief        Read data over USART peripheral (non-blocking mode)

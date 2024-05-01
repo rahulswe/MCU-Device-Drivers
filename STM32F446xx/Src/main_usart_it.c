@@ -2,7 +2,8 @@
  ******************************************************************************
  * @file      main_usart.c
  * @author    Rahul Singh
- * @brief     Sample application file for testing STM32F446xx USART driver APIs
+ * @brief     Sample application file for testing STM32F446xx USART driver
+ *            non-blocking APIs
  *
  ******************************************************************************
  *
@@ -52,6 +53,16 @@ uint8_t g_button_pressed = false;
  * defined in this application */
 #define DEFAULT_INT_PRIO    (14U)
 
+/* USART2 handle object */
+USART_handle_t gUSART2Handle;
+
+/* USART transmission completed flag */
+bool gTxDone = false;
+bool gRxDone = false;
+
+/* received data buffer */
+uint8_t g_rx_data[10] = {0};
+
 int main(void)
 {
 	/* configuration for GPIO pin connected to button on NUCLEOF446RE board */
@@ -96,7 +107,6 @@ int main(void)
 	USART2_GPIO_handle.cfg.pin_number = GPIO_PIN_3;
 	HAL_GPIO_init(&USART2_GPIO_handle);
 
-
 	/* configure USART peripheral */
 	USART_handle_t USART2Handle = {
 		.pUSARTx = USART2,
@@ -108,12 +118,20 @@ int main(void)
 		.cfg.baud_rate = USART_BAUD_RATE_115200,
 	};
 
+	memcpy(&gUSART2Handle, &USART2Handle, sizeof(USART_handle_t));
+
 	/* initialize USART peripheral */
-	HAL_USART_init(&USART2Handle);
+	HAL_USART_init(&gUSART2Handle);
+	/* enable USART interrupt */
+	HAL_USART_IRQ_config(IRQ_NO_USART2, DEFAULT_INT_PRIO, ENABLE);
 
 	while(1) {
 		/* wait until user button is pressed */
 		while(!g_button_pressed);
+
+		/* reset the Tx and Rx done flag */
+		gTxDone = false;
+		gRxDone = false;
 
 		/* reset the flag for next interrupt */
 		g_button_pressed = false;
@@ -124,22 +142,31 @@ int main(void)
 		/* enable the UART peripheral */
 		HAL_USART_ctrl(USART2, ENABLE);
 
-	    /* send data */
-		HAL_USART_send_data(&USART2Handle, (uint8_t*)data, sizeof(data));
+	    /* send data (non-blocking call) */
+		while(HAL_USART_send_data_IT(&gUSART2Handle, (uint8_t*)data, sizeof(data)) != HAL_USART_READY);
 
-		/* receive data */
-		uint8_t rx_data[10] = {0};
-		HAL_USART_read_data(&USART2Handle, &rx_data[0], sizeof(rx_data));
+		/* receive data (non-blocking call) */
+		while(HAL_USART_read_data_IT(&gUSART2Handle, &g_rx_data[0], sizeof(g_rx_data)) != HAL_USART_READY);
+
+		/* wait till USART Tx is completed */
+		while(!gTxDone);
+
+		/* wait till USART Rx is completed */
+		while(!gRxDone);
 
 		/* print the received data */
-		for(int i = 0; i < 10; i++) {
-			printf("%d ", rx_data[i]);
+		for(int i = 0; i < sizeof(g_rx_data); i++) {
+			printf("%d ", g_rx_data[i]);
 		}
 		printf("\n");
 
 		/* disable the UART peripheral */
 		HAL_USART_ctrl(USART2, DISABLE);
 	}
+}
+
+void USART2_IRQHandler(void) {
+	HAL_USART_IRQ_handler(&gUSART2Handle);
 }
 
 /* EXTI IRQ Handler for the GPIO pins
@@ -154,4 +181,41 @@ void EXTI15_10_IRQHandler(void)
 	 * delay to handle button de-bouncing */
 	sw_delay();
 	g_button_pressed = true;
+}
+
+/* USART application event callback */
+void HAL_USART_app_evt_callback(
+		USART_handle_t *pUSARThandle, HAL_USART_events_t evt) {
+
+	(void)pUSARThandle;
+
+	switch(evt) {
+	case HAL_USART_TX_DONE:
+	{
+		printf("USART Tx Done\n");
+		gTxDone = true;
+		break;
+	}
+	case HAL_USART_RX_DONE:
+	{
+		printf("USART Rx Done\n");
+		gRxDone = true;
+		break;
+	}
+	case HAL_USART_OVR_ERR_REPORTED:
+	{
+		printf("SPI Overrun Error Reported\n");
+		break;
+	}
+	case HAL_USART_ERR_REPORTED:
+	{
+		printf("USART Error Reported\n");
+		break;
+	}
+	default:
+	{
+		printf("USART Unknown Event Reported\n");
+		break;
+	}
+	}
 }

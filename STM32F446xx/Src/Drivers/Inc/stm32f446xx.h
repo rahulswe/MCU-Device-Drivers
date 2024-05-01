@@ -272,9 +272,9 @@ typedef struct {
 #define USART1                 ((USART_reg_t*)USART1_BASE_ADDR)
 #define USART2                 ((USART_reg_t*)USART2_BASE_ADDR)
 #define USART3                 ((USART_reg_t*)USART3_BASE_ADDR)
-#define UART4                  ((USART_reg_t*)USART1_BASE_ADDR)
-#define UART5                  ((USART_reg_t*)USART2_BASE_ADDR)
-#define USART6                 ((USART_reg_t*)USART3_BASE_ADDR)
+#define UART4                  ((USART_reg_t*)UART4_BASE_ADDR)
+#define UART5                  ((USART_reg_t*)UART5_BASE_ADDR)
+#define USART6                 ((USART_reg_t*)USART6_BASE_ADDR)
 
 /* ****** Macro Definitions for Some Peripheral's Basic Functionality ****** */
 
