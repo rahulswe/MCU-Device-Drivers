@@ -33,6 +33,7 @@
 
 #include <stdbool.h>
 #include "stm32f446xx_hal_usart.h"
+#include "stm32f446xx_hal_rcc.h"
 
 /* USART interrupt events handler declaration */
 static void _HAL_USART_rxne_evt_handler(USART_handle_t *pUSARThandle);
@@ -71,41 +72,6 @@ static void _HAL_USART_pclk_ctrl(USART_reg_t *pUSARTx, bool en)
 		else if(pUSARTx == UART5) { __UART5_CLK_DIS(); }
 		else if(pUSARTx == USART6) { __USART6_CLK_DIS(); }
 	}
-}
-
-uint16_t AHB_prescalar[] = {2, 4, 8, 16, 32, 64, 128, 256, 512};
-uint8_t APB1_prescalar[] = {2, 4, 8, 16};
-
-static uint32_t RCC_getPCLK1freq() {
-	uint32_t pclk1_freq = 0;
-
-	/* determine the clock source */
-	uint32_t reg_val = RCC->CFGR;
-
-	uint8_t sys_clk_sws = (reg_val >> 0x2) & 0x3;
-	if(sys_clk_sws == 0x00) {
-		pclk1_freq = HSI_OSC_FREQ;
-	} else if (sys_clk_sws == 0x01) {
-		pclk1_freq = HSE_OSC_FREQ;
-	} else {
-		/* TODO: add support for PLL */
-		pclk1_freq = HSI_OSC_FREQ;
-	}
-
-	/* get the AHB1 prescalar value */
-	uint8_t temp = (reg_val >> 0x4) & 0xF;
-	uint8_t ahb_prescalar = (temp < 8) ? 1:AHB_prescalar[temp - 8];
-
-	/* get the APB1 prescalar value */
-	temp = (reg_val >> 0xA) & 0x7;
-	uint8_t apb1_prescalar = (temp < 4) ? 1:APB1_prescalar[temp - 4];
-
-	/* obtain the APB1 clock frequency after
-	 * dividing AHB and APB1 prescalar value */
-	pclk1_freq /= ahb_prescalar;
-	pclk1_freq /= apb1_prescalar;
-
-	return pclk1_freq;
 }
 
 static void __HAL_USART_set_baud_rate(USART_reg_t *pUSARTx, uint32_t baud_rate)
