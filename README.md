@@ -2,7 +2,7 @@
 
 ## STM32F446xx MCU
 
-Following drivers have been implemented for this MCU - 
+Following peripheral drivers have been implemented for this MCU - 
 
 ### GPIO 
 
@@ -20,6 +20,15 @@ Driver files are located at the following location -
 ```shell
 STM32F446xx/src/Drivers/src/stm32f446xx_spi.c
 STM32F446xx/src/Drivers/inc/stm32f446xx_spi.h
+```
+
+### USART (asynchronus mode)
+
+Driver files are located at the following location - 
+
+```shell
+STM32F446xx/src/Drivers/src/stm32f446xx_usart.c
+STM32F446xx/src/Drivers/inc/stm32f446xx_usart.h
 ```
 
 ### Target

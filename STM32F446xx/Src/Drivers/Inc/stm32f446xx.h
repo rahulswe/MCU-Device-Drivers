@@ -106,6 +106,14 @@
 #define EXTI_BASE_ADDR         (APB2_BASE_ADDR + 0x3C00U)
 #define SYSCFG_BASE_ADDR       (APB2_BASE_ADDR + 0x3800U)
 
+/* USART Peripheral Base Address */
+#define USART1_BASE_ADDR       (APB2_BASE_ADDR + 0x1000U)
+#define USART2_BASE_ADDR       (APB1_BASE_ADDR + 0x4400U)
+#define USART3_BASE_ADDR       (APB1_BASE_ADDR + 0x4800U)
+#define UART4_BASE_ADDR        (APB1_BASE_ADDR + 0x4C00U)
+#define UART5_BASE_ADDR        (APB1_BASE_ADDR + 0x5000U)
+#define USART6_BASE_ADDR       (APB2_BASE_ADDR + 0x1400U)
+
 /* ********* Device Specific IRQ Number Definitions ********** */
 
 #define IRQ_NO_EXTI0         (6U)
@@ -120,6 +128,18 @@
 #define IRQ_NO_SPI2          (36U)
 #define IRQ_NO_SPI3          (51U)
 #define IRQ_NO_SPI4          (84U)
+
+#define IRQ_NO_USART1          (37U)
+#define IRQ_NO_USART2          (38U)
+#define IRQ_NO_USART3          (39U)
+#define IRQ_NO_UART4           (52U)
+#define IRQ_NO_UART5           (53U)
+#define IRQ_NO_USART6          (71U)
+
+/* high speed internal oscillator frequency */
+#define HSI_OSC_FREQ         (16000000U)
+/* high speed external oscillator frequency */
+#define HSE_OSC_FREQ         (8000000U)
 
 /* ********** Register Set Structure Definitions ********** */
 
@@ -210,6 +230,17 @@ typedef struct {
 	volatile uint32_t I2SPR;
 } SPI_reg_t;
 
+/* USART Register Set Structure Definition */
+typedef struct {
+	volatile uint32_t SR;
+	volatile uint32_t DR;
+	volatile uint32_t BRR;
+	volatile uint32_t CR1;
+	volatile uint32_t CR2;
+	volatile uint32_t CR3;
+	volatile uint32_t GTPR;
+} USART_reg_t;
+
 /* ************* Device Peripheral's Definitions ************* */
 
 /* GPIO Peripherals */
@@ -236,6 +267,14 @@ typedef struct {
 #define SPI2                   ((SPI_reg_t*)SPI2_BASE_ADDR)
 #define SPI3                   ((SPI_reg_t*)SPI3_BASE_ADDR)
 #define SPI4                   ((SPI_reg_t*)SPI4_BASE_ADDR)
+
+/* USART Peripherals */
+#define USART1                 ((USART_reg_t*)USART1_BASE_ADDR)
+#define USART2                 ((USART_reg_t*)USART2_BASE_ADDR)
+#define USART3                 ((USART_reg_t*)USART3_BASE_ADDR)
+#define UART4                  ((USART_reg_t*)UART4_BASE_ADDR)
+#define UART5                  ((USART_reg_t*)UART5_BASE_ADDR)
+#define USART6                 ((USART_reg_t*)USART6_BASE_ADDR)
 
 /* ****** Macro Definitions for Some Peripheral's Basic Functionality ****** */
 
@@ -278,6 +317,48 @@ typedef struct {
 #define __SPI4_CLK_DIS()                 (RCC->APB2ENR &= ~(0x1 << 0xD))
 /* SPI4 peripheral register reset */
 #define __SPI4_RST()                	 { RCC->APB2RSTR |= (0x1 << 0xD) ; RCC->APB2RSTR &= ~(0x1 << 0xD); }
+
+/* USART1 peripheral clock enable */
+#define __USART1_CLK_EN()                 (RCC->APB2ENR |= (0x1 << 0x04))
+/* USART1 peripheral clock disable */
+#define __USART1_CLK_DIS()                (RCC->APB2ENR &= ~(0x1 << 0x04))
+/* USART1 peripheral register reset */
+#define __USART1_RST()                	  { RCC->APB2RSTR |= (0x1 << 0x04) ; RCC->APB2RSTR &= ~(0x1 << 0x04); }
+
+/* USART2 peripheral clock enable */
+#define __USART2_CLK_EN()                 (RCC->APB1ENR |= (0x1 << 0x11))
+/* USART2 peripheral clock disable */
+#define __USART2_CLK_DIS()                (RCC->APB1ENR &= ~(0x1 << 0x11))
+/* USART2 peripheral register reset */
+#define __USART2_RST()                	  { RCC->APB1RSTR |= (0x1 << 0x11) ; RCC->APB1RSTR &= ~(0x1 << 0x11); }
+
+/* USART3 peripheral clock enable */
+#define __USART3_CLK_EN()                 (RCC->APB1ENR |= (0x1 << 0x12))
+/* USART3 peripheral clock disable */
+#define __USART3_CLK_DIS()                (RCC->APB1ENR &= ~(0x1 << 0x12))
+/* USART3 peripheral register reset */
+#define __USART3_RST()                	  { RCC->APB1RSTR |= (0x1 << 0x12) ; RCC->APB1RSTR &= ~(0x1 << 0x12); }
+
+/* UART4 peripheral clock enable */
+#define __UART4_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0x13))
+/* UART4 peripheral clock disable */
+#define __UART4_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0x13))
+/* UART4 peripheral register reset */
+#define __UART4_RST()                	  { RCC->APB1RSTR |= (0x1 << 0x13) ; RCC->APB1RSTR &= ~(0x1 << 0x13); }
+
+/* UART5 peripheral clock enable */
+#define __UART5_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0x14))
+/* UART5 peripheral clock disable */
+#define __UART5_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0x14))
+/* UART5 peripheral register reset */
+#define __UART5_RST()                	  { RCC->APB1RSTR |= (0x1 << 0x14) ; RCC->APB1RSTR &= ~(0x1 << 0x14); }
+
+/* USART6 peripheral clock enable */
+#define __USART6_CLK_EN()                 (RCC->APB2ENR |= (0x1 << 0x05))
+/* USART6 peripheral clock disable */
+#define __USART6_CLK_DIS()                (RCC->APB2ENR &= ~(0x1 << 0x05))
+/* USART6 peripheral register reset */
+#define __USART6_RST()                	  { RCC->APB2RSTR |= (0x1 << 0x05) ; RCC->APB2RSTR &= ~(0x1 << 0x05); }
 
 /* EXTI line get interrupt status */
 #define __EXTI_LINE_INT_STS(pin_num)     (EXTI->PR & (1 << pin_num))
