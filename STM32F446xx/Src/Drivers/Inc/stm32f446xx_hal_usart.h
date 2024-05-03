@@ -169,6 +169,10 @@ typedef struct {
 #define BITP_USART_CR3_CTSIE           (10U)
 #define BITP_USART_CR3_ONEBIT          (11U)
 
+/* USART BRR register bit positions */
+#define BITP_USART_BRR_FRACTION        (0U)
+#define BITP_USART_BRR_MANTISSA        (4U)
+
 /* ******************* Enum Definitions ********************* */
 
 /* USART peripheral state */

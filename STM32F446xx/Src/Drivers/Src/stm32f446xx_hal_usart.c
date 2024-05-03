@@ -74,20 +74,45 @@ static void _HAL_USART_pclk_ctrl(USART_reg_t *pUSARTx, bool en)
 	}
 }
 
+/*
+ * @brief        Set USART baud rate
+ *
+ * @param[in]    pUSARTx   : USART peripheral base address
+ * @param[in]    baud_rate : baud rate value in bits per second
+ *
+ * @return       None
+ */
 static void __HAL_USART_set_baud_rate(USART_reg_t *pUSARTx, uint32_t baud_rate)
 {
-	uint32_t fpclk = RCC_getPCLK1freq();
-	uint32_t over8 = 1;//oversampling by 8
+	uint32_t fpclk = 0;
+	/*
+	 * USART1 & USART6 are hanging on APB2 Bus
+	 * and rest all of the USART peripherals
+	 * are on APB1 Bus
+	 */
+	if((pUSARTx == USART1) || (pUSARTx == USART6)) {
+		fpclk = RCC_getPCLK2freq(); //get APB2 peripheral clock frequency
+	} else {
+		fpclk = RCC_getPCLK1freq(); //get APB1 peripheral clock frequency
+	}
+
+	/* get the oversampling configuration */
+	uint32_t over8 = (pUSARTx->CR1 >> BITP_USART_CR1_OVER8) & 0x1;
 	float usart_div = (float)fpclk/(8*(2 - over8)*baud_rate);
 
-	uint32_t mantissa = (uint32_t)usart_div;
+	/* estimate the mantissa value */
+	uint32_t mantissa = (uint32_t)usart_div & 0xFFF;
+
+	/* estimate the fraction value */
 	uint32_t fraction = (uint32_t)(usart_div*100) - (mantissa*100);
-	fraction = ((fraction*8) + 50)/100;//*8 for over8 = 1
+	fraction = ((fraction*8*(2-over8)) + 50)/100 & 0xF; //rounding off to nearest value
+	if(over8) {
+		fraction &= 0x7;//clear the 4th bit if over8 = 1
+	}
 
-	fraction &= 0x7; //for over8 = 1
-
-	uint32_t reg_val = (mantissa << 0x4) | fraction;
-	pUSARTx->BRR = reg_val;
+	/* configure the BRR register with mantissa and
+	 * fraction value to get the desired baud rate */
+	pUSARTx->BRR = (mantissa << BITP_USART_BRR_MANTISSA) | fraction;
 }
 
 /*
@@ -135,7 +160,8 @@ void HAL_USART_init(USART_handle_t *pUSARThandle)
 {
 	NULL_PTR_CHK(pUSARThandle);
 
-	uint32_t reg_val = 0;
+	/* read the default CR1 register value */
+	uint32_t reg_val = pUSARThandle->pUSARTx->CR1;
 
 	/* enable the USART peripheral clock */
 	_HAL_USART_pclk_ctrl(pUSARThandle->pUSARTx, true);
@@ -161,14 +187,19 @@ void HAL_USART_init(USART_handle_t *pUSARThandle)
 		reg_val |= pUSARThandle->cfg.parity_ctrl << BITP_USART_CR1_PS;
 	}
 
-	//OVER8
-	reg_val |= 0x1 << 15;
+	/*
+	 * keeping default value for over8 bit
+	 * i.e 0 (oversampling by 16) therefore,
+	 * commented below line
+	 */
+	// reg_val |= 0x1 << BITP_USART_CR1_OVER8;
 
 	/* set the USART CR1 register with the
 	* value as per specified configuration */
 	pUSARThandle->pUSARTx->CR1 = reg_val;
 
-	reg_val = 0; //todo: use default value instead of 0
+	/* read the default CR2 register value */
+	reg_val = pUSARThandle->pUSARTx->CR2;
 	/* set stop bit length */
 	reg_val |= pUSARThandle->cfg.stop_bit_len << BITP_USART_CR2_STOP;
 
@@ -178,7 +209,8 @@ void HAL_USART_init(USART_handle_t *pUSARThandle)
 
 	/* configure h/w flow control  */
 	if(pUSARThandle->cfg.hw_flow_ctrl != USART_HW_FLOW_CTRL_DISABLE) {
-		reg_val = 0; //todo: use default value instead of 0
+		/* read the default CR3 register value */
+		reg_val = pUSARThandle->pUSARTx->CR3;
 		if(pUSARThandle->cfg.hw_flow_ctrl == USART_HW_FLOW_CTRL_EN_RTS) {
 			reg_val |= 0x1 << BITP_USART_CR3_RTSE;
 		} else if(pUSARThandle->cfg.hw_flow_ctrl == USART_HW_FLOW_CTRL_EN_CTS) {
@@ -187,7 +219,7 @@ void HAL_USART_init(USART_handle_t *pUSARThandle)
 			reg_val |= 0x1 << BITP_USART_CR3_RTSE;
 			reg_val |= 0x1 << BITP_USART_CR3_CTSE;
 		}
-		/* set the USART CR2 register with the
+		/* set the USART CR3 register with the
 		* value as per specified configuration */
 		pUSARThandle->pUSARTx->CR3 = reg_val;
 	}
