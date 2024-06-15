@@ -47,3 +47,25 @@ Two ST NUCLEO-F446RE development boards were used to test these drivers for the 
 ### Debugging and Analysis
 
 A Digilent logic analyzer was used for testing, debugging and analysis purpose.
+
+
+## Nordic nRF52840 SOC
+
+Following peripheral drivers have been implemented - 
+
+### GPIO 
+
+Driver files are located at the following location - 
+
+```shell
+NRF52840/SES_PJT/drv/GPIO/gpio_drv.c
+NRF52840/SES_PJT/drv/GPIO/gpio_drv.h
+```
+
+### Target
+
+Nordic nRF52840 development board was used to test the GPIO driver.
+
+### Debugging and Analysis
+
+A Digilent logic analyzer was used for testing, debugging and analysis purpose.
