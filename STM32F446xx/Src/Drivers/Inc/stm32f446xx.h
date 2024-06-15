@@ -99,6 +99,11 @@
 #define SPI3_BASE_ADDR         (APB1_BASE_ADDR + 0x3C00U)
 #define SPI4_BASE_ADDR         (APB2_BASE_ADDR + 0x3400U)
 
+/* I2C Peripheral Base Addresses */
+#define I2C1_BASE_ADDR         (APB1_BASE_ADDR + 0x5400U)
+#define I2C2_BASE_ADDR         (APB1_BASE_ADDR + 0x5800U)
+#define I2C3_BASE_ADDR         (APB1_BASE_ADDR + 0x5C00U)
+
 /* RCC Peripheral Base Address */
 #define RCC_BASE_ADDR          (AHB1_BASE_ADDR + 0x3800U)
 
@@ -129,12 +134,19 @@
 #define IRQ_NO_SPI3          (51U)
 #define IRQ_NO_SPI4          (84U)
 
-#define IRQ_NO_USART1          (37U)
-#define IRQ_NO_USART2          (38U)
-#define IRQ_NO_USART3          (39U)
-#define IRQ_NO_UART4           (52U)
-#define IRQ_NO_UART5           (53U)
-#define IRQ_NO_USART6          (71U)
+#define IRQ_NO_I2C1_EV       (31U)
+#define IRQ_NO_I2C1_ER       (32U)
+#define IRQ_NO_I2C2_EV       (33U)
+#define IRQ_NO_I2C2_ER       (34U)
+#define IRQ_NO_I2C3_EV       (72U)
+#define IRQ_NO_I2C3_ER       (73U)
+
+#define IRQ_NO_USART1        (37U)
+#define IRQ_NO_USART2        (38U)
+#define IRQ_NO_USART3        (39U)
+#define IRQ_NO_UART4         (52U)
+#define IRQ_NO_UART5         (53U)
+#define IRQ_NO_USART6         (71U)
 
 /* high speed internal oscillator frequency */
 #define HSI_OSC_FREQ         (16000000U)
@@ -230,6 +242,20 @@ typedef struct {
 	volatile uint32_t I2SPR;
 } SPI_reg_t;
 
+/* I2C Register Set Structure Definition */
+typedef struct {
+	volatile uint32_t CR1;
+	volatile uint32_t CR2;
+	volatile uint32_t OAR1;
+	volatile uint32_t OAR2;
+	volatile uint32_t DR;
+	volatile uint32_t SR1;
+	volatile uint32_t SR2;
+	volatile uint32_t CCR;
+	volatile uint32_t TRISE;
+	volatile uint32_t FLTR;
+} I2C_reg_t;
+
 /* USART Register Set Structure Definition */
 typedef struct {
 	volatile uint32_t SR;
@@ -267,6 +293,11 @@ typedef struct {
 #define SPI2                   ((SPI_reg_t*)SPI2_BASE_ADDR)
 #define SPI3                   ((SPI_reg_t*)SPI3_BASE_ADDR)
 #define SPI4                   ((SPI_reg_t*)SPI4_BASE_ADDR)
+
+/* I2C Peripherals */
+#define I2C1                   ((I2C_reg_t*)I2C1_BASE_ADDR)
+#define I2C2                   ((I2C_reg_t*)I2C2_BASE_ADDR)
+#define I2C3                   ((I2C_reg_t*)I2C3_BASE_ADDR)
 
 /* USART Peripherals */
 #define USART1                 ((USART_reg_t*)USART1_BASE_ADDR)
@@ -317,6 +348,27 @@ typedef struct {
 #define __SPI4_CLK_DIS()                 (RCC->APB2ENR &= ~(0x1 << 0xD))
 /* SPI4 peripheral register reset */
 #define __SPI4_RST()                	 { RCC->APB2RSTR |= (0x1 << 0xD) ; RCC->APB2RSTR &= ~(0x1 << 0xD); }
+
+/* I2C1 peripheral clock enable */
+#define __I2C1_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0x15))
+/* I2C1 peripheral clock disable */
+#define __I2C1_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0x15))
+/* I2C1 peripheral register reset */
+#define __I2C1_RST()                	 { RCC->APB1RSTR |= (0x1 << 0x15) ; RCC->APB1RSTR &= ~(0x1 << 0x15); }
+
+/* I2C2 peripheral clock enable */
+#define __I2C2_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0x16))
+/* I2C2 peripheral clock disable */
+#define __I2C2_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0x16))
+/* I2C2 peripheral register reset */
+#define __I2C2_RST()                	 { RCC->APB1RSTR |= (0x1 << 0x16) ; RCC->APB1RSTR &= ~(0x1 << 0x16); }
+
+/* I2C3 peripheral clock enable */
+#define __I2C3_CLK_EN()                  (RCC->APB1ENR |= (0x1 << 0x17))
+/* I2C3 peripheral clock disable */
+#define __I2C3_CLK_DIS()                 (RCC->APB1ENR &= ~(0x1 << 0x17))
+/* I2C3 peripheral register reset */
+#define __I2C3_RST()                	 { RCC->APB1RSTR |= (0x1 << 0x17) ; RCC->APB1RSTR &= ~(0x1 << 0x17); }
 
 /* USART1 peripheral clock enable */
 #define __USART1_CLK_EN()                 (RCC->APB2ENR |= (0x1 << 0x04))

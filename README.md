@@ -22,6 +22,15 @@ STM32F446xx/src/Drivers/src/stm32f446xx_spi.c
 STM32F446xx/src/Drivers/inc/stm32f446xx_spi.h
 ```
 
+### I2C 
+
+Driver files are located at the following location - 
+
+```shell
+STM32F446xx/src/Drivers/src/stm32f446xx_i2c.c
+STM32F446xx/src/Drivers/inc/stm32f446xx_i2c.h
+```
+
 ### USART (asynchronus mode)
 
 Driver files are located at the following location - 
@@ -33,7 +42,7 @@ STM32F446xx/src/Drivers/inc/stm32f446xx_usart.h
 
 ### Target
 
-NUCLEOF446RE Development board was used for testing these drivers of STM32F446xx MCU. In case of SPI driver two of such boards were used to act as slave and master. 
+Two ST NUCLEO-F446RE development boards were used to test these drivers for the STM32F446xx MCU by having them communicate with each other, with one acting as the master and the other as the slave.
 
 ### Debugging and Analysis
 
